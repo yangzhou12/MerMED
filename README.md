@@ -15,6 +15,7 @@ We thanks the following projects for reference of creating MerMED-FM:
 
 - [MaSSL](https://github.com/sthalles/MaSSL)
 - [DINO](https://github.com/facebookresearch/dino)
+- [RETFound](https://github.com/rmaphoh/RETFound)
 
 ## Citation
 
