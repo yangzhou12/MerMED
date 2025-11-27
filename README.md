@@ -13,9 +13,8 @@ torchrun --nproc-per-node 8 main_mermed.py --arch vit_base --batch_size_per_gpu 
 
 We thanks the following projects for reference of creating MerMED-FM:
 
-- [ViLMedic](https://github.com/jbdel/vilmedic)
-- [TorchXRayVision](https://github.com/mlmed/torchxrayvision)
-- [MRM](https://github.com/RL4M/MRM-pytorch/tree/main)
+- [MaSSL](https://github.com/sthalles/MaSSL)
+- [DINO](https://github.com/facebookresearch/dino)
 
 ## Citation
 
