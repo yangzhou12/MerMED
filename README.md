@@ -22,7 +22,7 @@ pip install -r requirements.txt
 
 ### 🌱Fine-tuning with RETFound weights
 
-1. Get access to the pre-trained models on HuggingFace (register an account and fill in the form) and go to step 2:
+1. Get access to the pre-trained models on HuggingFace and go to step 2:
 <table><tbody>
 <!-- START TABLE -->
 <!-- TABLE HEADER -->
@@ -61,19 +61,7 @@ pip install -r requirements.txt
 </tr>
 </tbody></table>
 
-2. Login in your HuggingFace account, where HuggingFace token can be [created and copied](https://huggingface.co/settings/tokens).
-```
-huggingface-cli login --token YOUR_HUGGINGFACE_TOKEN
-```
-
-**Optional**: if your machine and server cannot access HuggingFace due to internet wall, run the command below (Do not run it if you can access):
-```
-export HF_ENDPOINT=https://hf-mirror.com
-```
-
-3. If you would like to fine-tune [DINOv2](https://github.com/facebookresearch/dinov2) and [DINOv3](https://github.com/facebookresearch/dinov3), please visit their GitHub repositories to download the model weights and put them in the RETFound folder.
-
-4. Organise your data into this directory structure (Public datasets used in this study can be [downloaded here](BENCHMARK.md))
+2. Organise your data into this directory structure (Public datasets used in this study can be [downloaded here](BENCHMARK.md))
 
 ```
 ├── data folder
@@ -93,44 +81,7 @@ export HF_ENDPOINT=https://hf-mirror.com
 
 
 
-5. Start fine-tuning by running `sh train.sh`.
-
-
-In `train.sh`, the model can be selected by changing the hyperparameters `MODEL`, `MODEL_ARCH`, `FINETUNE`:
-
-**RETFound**:
-
-| MODEL           | MODEL_ARCH               | FINETUNE                 | SIZE                     |
-|-----------------|--------------------------|--------------------------|--------------------------|
-| RETFound_mae    | retfound_mae             | RETFound_mae_natureCFP   | ~300M                    |
-| RETFound_mae    | retfound_mae             | RETFound_mae_natureOCT   | ~300M                    |
-| RETFound_mae    | retfound_mae             | RETFound_mae_meh         | ~300M                    |
-| RETFound_mae    | retfound_mae             | RETFound_mae_shanghai    | ~300M                    |
-| RETFound_dinov2 | retfound_dinov2          | RETFound_dinov2_meh      | ~300M                    |
-| RETFound_dinov2 | retfound_dinov2          | RETFound_dinov2_shanghai | ~300M                    |
-
-
-**DINOv3**:
-
-| MODEL           | MODEL_ARCH               | FINETUNE                         | SIZE                     |
-|-----------------|--------------------------|----------------------------------|--------------------------|
-| Dinov3          | dinov3_vits16            | dinov3_vits16_pretrain.pth       | ~21M                     |
-| Dinov3          | dinov3_vits16plus        | dinov3_vits16plus_pretrain.pth   | ~29M                     |
-| Dinov3          | dinov3_vitb16            | dinov3_vitb16_pretrain.pth       | ~86M                     |
-| Dinov3          | dinov3_vitl16            | dinov3_vitl16_pretrain.pth       | ~300M                    |
-| Dinov3          | dinov3_vith16plus        | dinov3_vith16plus_pretrain.pth   | ~840M                    |
-| Dinov3          | dinov3_vit7b16           | dinov3_vit7b16_pretrain.pth      | ~6.7B                    |
-
-
-**DINOv2**:
-
-| MODEL           | MODEL_ARCH               | FINETUNE                     | SIZE                     |
-|-----------------|--------------------------|------------------------------|--------------------------|
-| Dinov2          | dinov2_vits14            | dinov2_vits14_pretrain.pth   | ~21M                     |
-| Dinov2          | dinov2_vitb14            | dinov2_vitb14_pretrain.pth   | ~86M                     |
-| Dinov2          | dinov2_vitl14            | dinov2_vitl14_pretrain.pth   | ~300M                    |
-| Dinov2          | dinov2_vitg14            | dinov2_vitg14_pretrain.pth   | ~1.1B                    |
-
+3. Start fine-tuning by running `sh train.sh`.
 
 Change the DATA_PATH to your dataset directory.
 
@@ -165,47 +116,6 @@ torchrun --nproc_per_node=1 --master_port=48766 main_finetune.py \
   --input_size 224 \
   --task "${TASK}" \
   --adaptation "${ADAPTATION}" 
-
-```
-
-
-
-6. For evaluation only (download data and model checkpoints [here](BENCHMARK.md); change the DATA_PATH below)
-
-
-```
-# ==== Model/settings (match training) ====
-ADAPTATION="finetune"
-MODEL="RETFound_dinov2"
-MODEL_ARCH="retfound_dinov2"
-FINETUNE="RETFound_dinov2_meh"
-
-# ==== Data/settings (match training) ====
-DATASET="MESSIDOR2"
-NUM_CLASS=5
-
-# =======================
-DATA_PATH="PATH TO THE DATASET"
-TASK="${MODEL_ARCH}_${DATASET}_${ADAPTATION}"
-
-# Path to the trained checkpoint (adjust if you saved elsewhere)
-CKPT="./output_dir/${TASK}/checkpoint-best.pth"
-
-# ==== Evaluation only ====
-torchrun --nproc_per_node=1 --master_port=48766 main_finetune.py \
-  --model "${MODEL}" \
-  --model_arch "${MODEL_ARCH}" \
-  --savemodel \
-  --global_pool \
-  --batch_size 128 \
-  --world_size 1 \
-  --nb_classes "${NUM_CLASS}" \
-  --data_path "${DATA_PATH}" \
-  --input_size 224 \
-  --task "${TASK}" \
-  --adaptation "${ADAPTATION}" \
-  --eval \
-  --resume "${CKPT}"
 
 ```
 
