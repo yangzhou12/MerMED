@@ -1,4 +1,4 @@
-# MerMED
+# MerMED-FM
 PyTroch implementation for "[MerMED-FM: Multimodal, Multi-Disease Medical Imaging Foundation Model](https://arxiv.org/abs/2507.00185)"
 
 # Running scripts
