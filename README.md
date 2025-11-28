@@ -22,44 +22,7 @@ pip install -r requirements.txt
 
 ### 🌱Fine-tuning with RETFound weights
 
-1. Get access to the pre-trained models on HuggingFace and go to step 2:
-<table><tbody>
-<!-- START TABLE -->
-<!-- TABLE HEADER -->
-<th valign="bottom"></th>
-<th valign="bottom">ViT-Large</th>
-<th valign="bottom">Source</th>
-<!-- TABLE BODY -->
-<tr><td align="left">RETFound_mae_natureCFP</td>
-<td align="center"><a href="https://huggingface.co/YukunZhou/RETFound_mae_natureCFP">access</a></td>
-<td align="center"><a href="https://www.nature.com/articles/s41586-023-06555-x">Nature RETFound paper</a></td>
-</tr>
-<!-- TABLE BODY -->
-<tr><td align="left">RETFound_mae_natureOCT</td>
-<td align="center"><a href="https://huggingface.co/YukunZhou/RETFound_mae_natureOCT">access</a></td>
-<td align="center"><a href="https://www.nature.com/articles/s41586-023-06555-x">Nature RETFound paper</a></td>
-</tr>
-<!-- TABLE BODY -->
-<tr><td align="left">RETFound_mae_meh</td>
-<td align="center"><a href="https://huggingface.co/YukunZhou/RETFound_mae_meh">access</a></td>
-<td align="center"><a href="https://www.researchsquare.com/article/rs-6080254/v1">FM data paper</a></td>
-</tr>
-<!-- TABLE BODY -->
-<tr><td align="left">RETFound_mae_shanghai</td>
-<td align="center"><a href="https://huggingface.co/YukunZhou/RETFound_mae_shanghai">access</a></td>
-<td align="center"><a href="https://www.researchsquare.com/article/rs-6080254/v1">FM data paper</a></td>
-</tr>
-<!-- TABLE BODY -->
-<tr><td align="left">RETFound_dinov2_meh</td>
-<td align="center"><a href="https://huggingface.co/YukunZhou/RETFound_dinov2_meh">access</a></td>
-<td align="center"><a href="https://www.researchsquare.com/article/rs-6080254/v1">FM data paper</a></td>
-</tr>
-<!-- TABLE BODY -->
-<tr><td align="left">RETFound_dinov2_shanghai</td>
-<td align="center"><a href="https://huggingface.co/YukunZhou/RETFound_dinov2_shanghai">access</a></td>
-<td align="center"><a href="https://www.researchsquare.com/article/rs-6080254/v1">FM data paper</a></td>
-</tr>
-</tbody></table>
+1. Get access to the [pre-trained model on HuggingFace](https://huggingface.co/youngzhou12/MerMED) and go to step 2:
 
 2. Organise your data into this directory structure (Public datasets used in this study can be [downloaded here](BENCHMARK.md))
 
