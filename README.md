@@ -1,7 +1,7 @@
 # MerMED-FM
 Official implementation for "[MerMED-FM: Multimodal, Multi-Disease Medical Imaging Foundation Model](https://arxiv.org/abs/2507.00185)"
 
-### 🔧Install environment
+### Install environment
 
 1. Create environment with conda:
 
@@ -20,7 +20,7 @@ pip install -r requirements.txt
 ```
 
 
-### 🌱Fine-tuning with RETFound weights
+### Fine-tuning with MerMED-FM weights
 
 1. Get access to the [pre-trained model on HuggingFace](https://huggingface.co/youngzhou12/MerMED) and go to step 2:
 
@@ -81,8 +81,6 @@ torchrun --nproc_per_node=1 --master_port=48766 main_finetune.py \
   --adaptation "${ADAPTATION}" 
 
 ```
-
-# Running scripts
 
 ### Run the pre-training of MerMED-FM
 
