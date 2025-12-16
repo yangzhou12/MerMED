@@ -14,40 +14,10 @@ conda activate retfound
 
 ```
 pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
-git clone https://github.com/rmaphoh/RETFound/
-cd RETFound
+git clone https://github.com/yangzhou12/MerMED/
+cd MerMED
 pip install -r requirements.txt
 ```
-
-
-### Fine-tuning with MerMED-FM weights
-
-1. Get access to the [pre-trained model on HuggingFace](https://huggingface.co/youngzhou12/MerMED) and go to step 2:
-
-2. Organise your data into this directory structure (Public datasets used in this study can be [downloaded here](BENCHMARK.md))
-
-```
-├── data folder
-    ├──train
-        ├──class_a
-        ├──class_b
-        ├──class_c
-    ├──val
-        ├──class_a
-        ├──class_b
-        ├──class_c
-    ├──test
-        ├──class_a
-        ├──class_b
-        ├──class_c
-``` 
-
-
-
-3. Start fine-tuning by running `bash finetune.sh`.
-
-Change the DATA_PATH to your dataset directory.
-
 
 ### Pre-training the MerMED-FM model
 
