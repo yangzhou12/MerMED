@@ -22,7 +22,7 @@ from memory_bank import MemoryBank
 from random_partition import RandomPartition
 from criterion import Criterion
 import models
-import wandb  # Add this import
+import wandb 
 
 
 torchvision_archs = sorted(
@@ -507,8 +507,8 @@ def train_mermed(args):
     start_epoch = to_restore["epoch"]
 
     if utils.is_main_process():
-        wandb.init(mode="disabled")
-        # wandb.init(project="MerMED", name=f"Model_{args.arch}", config=args)  # Initialize wandb
+        # wandb.init(mode="disabled")
+        wandb.init(project="MerMED", name=f"Model_{args.arch}", config=args)  # Initialize wandb
         wandb.save("main_mermed.py")
         wandb.save("utils.py")
         wandb.save("head.py")
