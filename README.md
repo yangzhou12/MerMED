@@ -42,7 +42,6 @@ Test AUROC on held-out downstream tasks, by modality:
 - [Finetuning and evaluation](#finetuning-and-evaluation)
 - [Aggregating results](#aggregating-results)
 - [Explainability](#explainability)
-- [Data availability](#data-availability)
 - [License](#license)
 - [Citation](#citation)
 - [Acknowledgements](#acknowledgements)
@@ -67,7 +66,7 @@ pip install -r requirements.txt
 
 ## Pretrained weights
 
-The checkpoint is distributed via HuggingFace (1.6 GB, too large for git):
+The checkpoint is distributed via HuggingFace (1.6 GB):
 **[youngzhou12/MerMED](https://huggingface.co/youngzhou12/MerMED)**.
 
 ```bash
@@ -319,35 +318,10 @@ python visualize_attention.py --arch vit_base_patch16 \
     --image_path <image> --output_dir ./attention
 ```
 
-## Data availability
-
-This repository contains no imaging data. The downstream datasets fall into two
-groups.
-
-**Publicly available** (obtain from their original sources): APTOS2019, CRFO-v4,
-Glaucoma_fundus, IDRiD, JSIEC, MESSIDOR2, PAPILA, OCTDL, OCTID, COVIDx-CXR4,
-TBX11K, RSNA Pneumonia, SIIM-ACR Pneumothorax, CBIS-DDSM, chest-ctscan-images,
-IQ-OTH/NCCD, SARS-COV-2, HRCTCov19, iCTCF, CRC-VAL-HE-7K, PanNuke,
-Kather_Texture_2016, BreakHis, Chaoyang, LC25000, MIDOG25, AMi-Br, BUSC, BUSI,
-US3M, BrEaST, BCN20000, Derm7pt, Dermnet, HAM10000, PAD-UFES-20, HIBA, MSKCC, DDI.
-
-**Access-restricted** — available only under a data use agreement or from the
-respective data custodians: DRCR_CFP, DRCR_OCT, FM-AMD, FM-CKD, FM-DR,
-FM-Glaucoma, FM-MMD, Seed_Cataract, RAPIER_CT, RAPIER_Gastric, TCGA.
-
-The pretraining corpus is assembled from public per-modality image pools; see the
-paper for the full provenance.
-
 ## License
 
 This repository is released under **[CC BY-NC 4.0](LICENSE)** — free to use,
 share, and adapt for **non-commercial** purposes with attribution.
-
-The finetuning code derives from MAE and RETFound, both CC BY-NC 4.0, so the
-non-commercial restriction is inherited rather than freely chosen. Some
-components carry different terms, and one upstream project publishes no license
-at all — see **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)** before
-redistributing.
 
 ## Citation
 
@@ -374,8 +348,6 @@ If you use MerMED-FM, please cite the paper:
                Ting, Daniel Shu Wei},
   journal   = {The Lancet Digital Health},
   year      = {2026},
-  pages     = {101007},
-  issn      = {2589-7500},
   doi       = {10.1016/j.landig.2026.101007},
   url       = {https://doi.org/10.1016/j.landig.2026.101007},
   publisher = {Elsevier},
@@ -390,8 +362,5 @@ The earlier preprint is [arXiv:2507.00185](https://arxiv.org/abs/2507.00185).
 MerMED-FM builds on these projects:
 
 - [MaSSL](https://github.com/sthalles/MaSSL) — memory bank and random prototype partitioning
-- [DINO](https://github.com/facebookresearch/dino) — self-distillation objective
-- [DINOv2](https://github.com/facebookresearch/dinov2) — KoLeo regularizer
-- [iBOT](https://github.com/bytedance/ibot) — ViT implementation
 - [MAE](https://github.com/facebookresearch/mae) and [RETFound](https://github.com/rmaphoh/RETFound_MAE) — finetuning pipeline
 - [timm](https://github.com/huggingface/pytorch-image-models) — backbone builders
