@@ -32,7 +32,7 @@ pip install -r requirements.txt
 
 ## Pretrained weights
 
-The checkpoint is distributed via HuggingFace (1.6 GB, too large for git):
+The checkpoint is distributed via HuggingFace (1.6 GB):
 **[youngzhou12/MerMED](https://huggingface.co/youngzhou12/MerMED)**.
 
 ```bash
@@ -258,8 +258,6 @@ Released under **[CC BY-NC 4.0](LICENSE)** — use, share and adapt for
                Ting, Daniel Shu Wei},
   journal   = {The Lancet Digital Health},
   year      = {2026},
-  pages     = {101007},
-  issn      = {2589-7500},
   doi       = {10.1016/j.landig.2026.101007},
   url       = {https://doi.org/10.1016/j.landig.2026.101007},
   publisher = {Elsevier},
@@ -269,5 +267,10 @@ Released under **[CC BY-NC 4.0](LICENSE)** — use, share and adapt for
 
 ## Acknowledgements
 
-MerMED-FM builds on MaSSL, DINO, DINOv2, iBOT, MAE, RETFound and timm; see
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for per-file attribution.
+MerMED-FM builds on these projects:
+
+- [MaSSL](https://github.com/sthalles/MaSSL) — memory bank and random prototype partitioning
+- [MAE](https://github.com/facebookresearch/mae) and [RETFound](https://github.com/rmaphoh/RETFound_MAE) — finetuning pipeline
+- [timm](https://github.com/huggingface/pytorch-image-models) — backbone builders
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for per-file attribution.
