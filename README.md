@@ -23,11 +23,18 @@ explainability code used in the paper.
 
 ### Reported performance
 
-Test AUROC on held-out downstream tasks, by modality:
+Best test AUROC per modality, as reported in the
+[preprint abstract](https://arxiv.org/abs/2507.00185):
 
 | OCT | Pathology | Ultrasound | CT | Dermatology |
 |:---:|:---:|:---:|:---:|:---:|
 | 0.988 | 0.982 | 0.951 | 0.943 | 0.931 |
+
+Refer to the [published paper](https://doi.org/10.1016/j.landig.2026.101007) for
+the authoritative results across all datasets and modalities. The
+[per-dataset table](#example-test-performance) below is computed from this
+repository's own runs and is scoped differently, so individual numbers there will
+not match these headline figures.
 
 ---
 
@@ -181,8 +188,25 @@ image_id,image_path,modality
 TRAIN032990.jpg,<DATA_ROOT>/JustRAIGS/images/TRAIN032990.jpg,cfp
 ```
 
-`modality` selects per-modality mean/std normalization; recognized values are
-`cfp`, `oct`, `cxr`, `ct`, `us`, `path`, `skin`, and `eye`.
+`modality` selects the per-modality mean/std normalization and is matched
+**case-sensitively**. The accepted values are:
+
+| Value | Modality |
+|-------|----------|
+| `cfp` | Color fundus photography |
+| `oct` | Optical coherence tomography |
+| `cxr` | Chest X-ray |
+| `CT` | Computed tomography |
+| `US` | Ultrasound |
+| `pathology` | Histopathology |
+| `skin` | Dermatology |
+| `eye` | Generic ophthalmic fallback (`cfp` + `oct` pooled statistics) |
+
+Note the capitalization of `CT` and `US`, and that histopathology is
+`pathology` rather than `path`. An unrecognized value raises a `KeyError` during
+pretraining (`DataAugmentationMerMED` in `main_mermed.py`). The finetuning
+entry points take the same names through `--modality`, which additionally
+accepts `other` to fall back to ImageNet statistics.
 
 **Downstream labels** — each dataset directory holds a `finetune_labels.csv` with
 columns `image_id, image_path, label, split`, where `split ∈ {train, val, test}`
@@ -228,6 +252,13 @@ Checkpoints are written to `--output_dir` as `checkpoint.pth`, plus
 [Weights & Biases](https://wandb.ai) by default; pass **`--no_wandb`** to train
 without it (checkpointing is unaffected).
 
+> **Batch size constraint.** The memory bank enqueues one slot per sample and
+> requires its capacity to divide evenly by the global batch, so
+> `--out_dim % (--batch_size_per_gpu × num_gpus)` must be `0`. The released
+> recipe satisfies this (`131072 % (128 × 8) == 0`); values such as 96 or 100 per
+> GPU do not, and trip an assertion in `memory_bank.py` on the first step. Prefer
+> powers of two when changing the batch size or GPU count.
+
 ## Finetuning and evaluation
 
 Single dataset:
@@ -247,8 +278,9 @@ python main_finetune.py \
     --log_dir   <RESULTS_DIR>/MerMED_100_seed0_logs/
 ```
 
-- `--train_size ∈ {0.1, 0.3, 0.5, 1.0}` takes a **stratified subsample** of the
-  training split for the few-shot regimes.
+- `--train_size` is the fraction of the training split to keep, taken as a
+  **stratified subsample** (any float in `(0, 1]`; the paper sweeps
+  `0.1, 0.3, 0.5, 1.0`). `1.0` uses the full split.
 - The test split is evaluated at the end of every run. Add `--eval` to evaluate an
   existing checkpoint without training.
 - Each run writes `metrics_val.csv`, `metrics_test.csv`,
@@ -321,19 +353,70 @@ python visualize_attention.py --arch vit_base_patch16 \
 
 ## Data availability
 
-This repository contains no imaging data. The downstream datasets fall into two
-groups.
+This repository contains no imaging data. The 50 downstream datasets are listed
+below with the exact identifier to pass as `--task` and the matching
+`--nb_classes`. **Restricted** datasets are available only under a data use
+agreement or from the respective custodians; the rest are obtainable from their
+original public sources.
 
-**Publicly available** (obtain from their original sources): APTOS2019, CRFO-v4,
-Glaucoma_fundus, IDRiD, JSIEC, MESSIDOR2, PAPILA, OCTDL, OCTID, COVIDx-CXR4,
-TBX11K, RSNA Pneumonia, SIIM-ACR Pneumothorax, CBIS-DDSM, chest-ctscan-images,
-IQ-OTH/NCCD, SARS-COV-2, HRCTCov19, iCTCF, CRC-VAL-HE-7K, PanNuke,
-Kather_Texture_2016, BreakHis, Chaoyang, LC25000, MIDOG25, AMi-Br, BUSC, BUSI,
-US3M, BrEaST, BCN20000, Derm7pt, Dermnet, HAM10000, PAD-UFES-20, HIBA, MSKCC, DDI.
+| Modality | `--task` | `--nb_classes` | Access |
+|----------|----------|---------------:|--------|
+| CFP | `APTOS2019` | 5 | public |
+| CFP | `CRFO-v4` | 7 | public |
+| CFP | `Glaucoma_fundus` | 3 | public |
+| CFP | `IDRiD` | 5 | public |
+| CFP | `JSIEC` | 39 | public |
+| CFP | `MESSIDOR2` | 5 | public |
+| CFP | `PAPILA` | 3 | public |
+| CFP | `DRCR_CFP` | 2 | restricted |
+| CFP | `FM-AMD` | 4 | restricted |
+| CFP | `FM-CKD` | 2 | restricted |
+| CFP | `FM-DR` | 5 | restricted |
+| CFP | `FM-Glaucoma` | 3 | restricted |
+| CFP | `FM-MMD` | 5 | restricted |
+| CFP | `Seed_Cataract` | 2 | restricted |
+| OCT | `OCTDL` | 7 | public |
+| OCT | `OCTID` | 5 | public |
+| OCT | `DRCR_OCT` | 2 | restricted |
+| CXR | `COVIDx-CXR4` | 2 | public |
+| CXR | `TBX11K` | 3 | public |
+| CXR | `rsna_pneumonia` | 2 | public |
+| CXR | `siim_acr_pneumothorax` | 2 | public |
+| CXR | `CBIS_DDSM` | 3 | public |
+| CT | `chest-ctscan-images` | 4 | public |
+| CT | `IQ-OTHNCCD` | 3 | public |
+| CT | `SARS-COV-2` | 2 | public |
+| CT | `HRCTCov19` | 2 | public |
+| CT | `iCTCF` | 3 | public |
+| CT | `RAPIER_CT` | 7 | restricted |
+| Pathology | `CRC-VAL-HE-7K` | 9 | public |
+| Pathology | `PanNuke` | 19 | public |
+| Pathology | `Kather_Texture_2016` | 8 | public |
+| Pathology | `BreakHis` | 2 | public |
+| Pathology | `Chaoyang` | 4 | public |
+| Pathology | `LC25000` | 5 | public |
+| Pathology | `MIDOG25` | 2 | public |
+| Pathology | `AMi-Br` | 2 | public |
+| Pathology | `TCGA` | 32 | restricted |
+| Pathology | `RAPIER_Gastric` | 3 | restricted |
+| Ultrasound | `BUSC` | 2 | public |
+| Ultrasound | `BUSI` | 3 | public |
+| Ultrasound | `US3M` | 2 | public |
+| Ultrasound | `BrEaST` | 2 | public |
+| Dermatology | `BCN20000` | 9 | public |
+| Dermatology | `Derm7pt` | 2 | public |
+| Dermatology | `Dermnet` | 23 | public |
+| Dermatology | `HAM10000_clean` | 7 | public |
+| Dermatology | `pad-ufes` | 6 | public |
+| Dermatology | `HIBA` | 2 | public |
+| Dermatology | `MSKCC` | 2 | public |
+| Dermatology | `DDI` | 2 | public |
 
-**Access-restricted** — available only under a data use agreement or from the
-respective data custodians: DRCR_CFP, DRCR_OCT, FM-AMD, FM-CKD, FM-DR,
-FM-Glaucoma, FM-MMD, Seed_Cataract, RAPIER_CT, RAPIER_Gastric, TCGA.
+Identifiers are the directory names the loader expects, so they are not always
+the dataset's published name — `HAM10000_clean`, `pad-ufes`, `CBIS_DDSM` and
+`IQ-OTHNCCD` correspond to HAM10000, PAD-UFES-20, CBIS-DDSM and IQ-OTH/NCCD
+respectively. The same list drives
+`finetuning/scripts/finetune_mermed.sh`.
 
 The pretraining corpus is assembled from public per-modality image pools; see the
 paper for the full provenance.

@@ -37,7 +37,9 @@ wandb>=0.13.0
 tensorboard>=2.10.0
 
 # Checkpoint download from HuggingFace (see README, "Pretrained weights").
-huggingface_hub>=0.23.0
+# >=0.34 provides the `hf` CLI the README uses; earlier versions ship the
+# deprecated `huggingface-cli` instead.
+huggingface_hub>=0.34.0
 
 # Optional HuggingFace dataset backend, used by the `load_dataset` code path in
 # finetuning/util/datasets.py.
