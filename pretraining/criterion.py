@@ -4,7 +4,6 @@ Masks the -inf entries the memory bank introduces when it gates logits by label
 agreement, so those positions contribute nothing to the loss.
 
 Adapted from MaSSL (https://github.com/sthalles/MaSSL).
-See THIRD_PARTY_NOTICES.md for attribution and licensing status.
 """
 import torch.nn as nn
 import torch

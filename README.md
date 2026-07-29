@@ -236,8 +236,7 @@ python visualize_attention.py --arch vit_base_patch16 \
 ## License
 
 Released under **[CC BY-NC 4.0](LICENSE)** — use, share and adapt for
-**non-commercial** purposes with attribution. Third-party components are listed in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+**non-commercial** purposes with attribution.
 
 ## Citation
 
@@ -272,5 +271,3 @@ MerMED-FM builds on these projects:
 - [MaSSL](https://github.com/sthalles/MaSSL) — memory bank and random prototype partitioning
 - [MAE](https://github.com/facebookresearch/mae) and [RETFound](https://github.com/rmaphoh/RETFound_MAE) — finetuning pipeline
 - [timm](https://github.com/huggingface/pytorch-image-models) — backbone builders
-
-See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for per-file attribution.
