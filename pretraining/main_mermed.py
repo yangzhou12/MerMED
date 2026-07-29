@@ -8,9 +8,8 @@ the released ``MerMED.pth`` foundation model used by the finetuning code.
 """
 import argparse
 import os
-import shutil
 import sys
-from datetime import datetime, timedelta
+from datetime import timedelta
 import time
 import math
 from koleo import KoLeoLoss
@@ -20,10 +19,8 @@ from PIL import Image
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
-from torchvision import datasets, transforms
-from torchvision import models as torchvision_models
+from torchvision import transforms
 from datasets import MerMEDDataset, AllClassesImbalancedSampler
-from timm.optim import create_optimizer_v2 as create_optimizer
 import utils
 from head import ProjectionHead
 from memory_bank import MemoryBank
@@ -31,14 +28,6 @@ from random_partition import RandomPartition
 from criterion import Criterion
 import models
 import wandb
-
-torchvision_archs = sorted(
-    name
-    for name in torchvision_models.__dict__
-    if name.islower()
-    and not name.startswith("__")
-    and callable(torchvision_models.__dict__[name])
-)
 
 def get_args_parser():
     parser = argparse.ArgumentParser("MerMED", add_help=False)
@@ -63,9 +52,7 @@ def get_args_parser():
         type=int,
         help="""Size in pixels
         of input square patches - default 16 (for 16x16 patches). Using smaller
-        values leads to better performance but requires more memory. Applies only
-        for ViTs (vit_tiny, vit_small and vit_base). If <16, we recommend disabling
-        mixed precision training (--use_fp16 false) to avoid unstabilities.""",
+        values leads to better performance but requires more memory.""",
     )
     parser.add_argument(
         "--out_dim",
@@ -73,14 +60,6 @@ def get_args_parser():
         type=int,
         help="""Dimensionality of
         the MerMED head output. For complex and large datasets large values (like 65k) work well.""",
-    )
-    parser.add_argument(
-        "--norm_last_layer",
-        default=True,
-        type=utils.bool_flag,
-        help="""Whether or not to weight normalize the last layer of the MerMED head.
-        Not normalizing leads to better performance but can make the training unstable.
-        In our experiments, we typically set this paramater to False with vit_small and True with vit_base.""",
     )
     parser.add_argument(
         "--momentum_teacher",
@@ -98,15 +77,6 @@ def get_args_parser():
     )
 
     # Training/Optimization parameters
-    parser.add_argument(
-        "--use_fp16",
-        type=utils.bool_flag,
-        default=True,
-        help="""Whether or not
-        to use half precision for training. Improves training time and memory requirements,
-        but can provoke instability and slight decay of performance. We recommend disabling
-        mixed precision if the loss is unstable, if reducing the patch size or if training with bigger ViTs.""",
-    )
     parser.add_argument(
         "--weight_decay",
         type=float,
@@ -203,12 +173,6 @@ def get_args_parser():
         type=float,
         help="Weight for the koleo loss contribution",
     )
-    parser.add_argument(
-        "--entropy_loss_weight",
-        default=0.0,
-        type=float,
-        help="Weight for the entropy loss contribution",
-    )
 
     # Temperature teacher parameters
     parser.add_argument(
@@ -297,7 +261,7 @@ def get_args_parser():
         "--saveckp_freq", default=50, type=int, help="Save checkpoint every x epochs."
     )
     parser.add_argument(
-        "--print_freq", default=50, type=int, help="Save checkpoint every x epochs."
+        "--print_freq", default=50, type=int, help="Log training progress every x iterations."
     )
     parser.add_argument("--seed", default=0, type=int, help="Random seed.")
     parser.add_argument(
@@ -314,21 +278,9 @@ def get_args_parser():
         distributed training; see https://pytorch.org/docs/stable/distributed.html""",
     )
     parser.add_argument(
-        "--use_masked_im_modeling",
-        default=False,
-        type=utils.bool_flag,
-        help="Whether to use masked image modeling (mim) in backbone (Default: True)",
-    )
-    parser.add_argument(
         "--use_mean_pooling",
         default=False,
         type=utils.bool_flag,
-        help="Whether to use mean average pooling instead of returning the CLS token (Default: False)",
-    )
-    parser.add_argument(
-        "--world_size",
-        type=int,
-        default=0,
         help="Whether to use mean average pooling instead of returning the CLS token (Default: False)",
     )
     parser.add_argument("--local_rank", type=int, help="Please ignore and do not set this argument.")
@@ -378,7 +330,7 @@ def train_mermed(args):
         patch_size=args.patch_size,
         drop_path_rate=args.drop_path_rate,
         return_all_tokens=False,
-        masked_im_modeling=args.use_masked_im_modeling,
+        masked_im_modeling=False,
         use_mean_pooling=args.use_mean_pooling,
     )
     teacher = models.__dict__[args.arch](

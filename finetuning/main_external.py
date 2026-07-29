@@ -25,7 +25,7 @@ from timm.data.mixup import Mixup
 from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
 from timm.optim import create_optimizer
 
-from util.datasets import build_dataset, create_external_datasets
+from util.datasets import create_external_datasets
 from util.pos_embed import interpolate_pos_embed
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
@@ -50,10 +50,8 @@ def get_args_parser():
                         help='images input size')
 
     parser.add_argument('--drop_path', type=float, default=0.2, metavar='PCT',
-                        help='Drop path rate (default: 0.1)')
+                        help='Drop path rate (default: 0.2)')
 
-    parser.add_argument('--init_values', type=float, default=1, metavar='PCT',
-                        help='Drop path rate (default: 0)')
     
     # Optimizer parameters
     parser.add_argument('--clip_grad', type=float, default=None, metavar='NORM',
@@ -91,8 +89,6 @@ def get_args_parser():
                         help='Random erase mode (default: "pixel")')
     parser.add_argument('--recount', type=int, default=1,
                         help='Random erase count (default: 1)')
-    parser.add_argument('--resplit', action='store_true', default=False,
-                        help='Do not random erase first (clean) augmentation split')
 
     # * Mixup params
     parser.add_argument('--mixup', type=float, default=0,
@@ -156,7 +152,6 @@ def get_args_parser():
     # distributed training parameters
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
-    parser.add_argument('--local_rank', default=-1, type=int)
     parser.add_argument('--dist_on_itp', action='store_true')
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')

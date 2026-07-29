@@ -7,12 +7,10 @@ keeps every modality represented in each batch under distributed training.
 import os
 
 import pandas as pd
-from torch.utils.data import Dataset
-from PIL import Image
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, Sampler
+from PIL import Image
 from torchvision import transforms
-import numpy as np
 from tqdm import tqdm
 
 class MerMEDDataset(Dataset):
@@ -26,17 +24,13 @@ class MerMEDDataset(Dataset):
         self.df = pd.read_csv(csv_file)
         self.modality2idx = {label: idx for idx, label in enumerate(sorted(self.df["modality"].unique()))}
         
-        # Initialize tracking variables
+        # Per-modality index lists, consumed by AllClassesImbalancedSampler.
         self.target_indices = []
-        min_class_size = float('inf')  # More explicit than None
-        
-        # Build indices for each class
-        for class_name, class_idx in self.modality2idx.items():
-            indices = self.df[self.df["modality"] == class_name].index.tolist()
-            self.target_indices.append(indices)
-            min_class_size = min(min_class_size, len(indices))
-            
-        self.min_class_size = min_class_size  # Store for potential future use
+        for class_name in self.modality2idx:
+            self.target_indices.append(
+                self.df[self.df["modality"] == class_name].index.tolist()
+            )
+
         self.transform = transform
 
     def __len__(self):
@@ -53,11 +47,6 @@ class MerMEDDataset(Dataset):
             image = self.transform(image, data_point.modality)
 
         return image, modality
-
-import torch
-import numpy as np
-from torch.utils.data import Sampler
-
 
 class InfiniteClassSampler:
     """
@@ -238,42 +227,6 @@ class AllClassesImbalancedSampler(Sampler):
         Total number of mini-batches = epochs * batches_per_epoch.
         """
         return self.epochs * self.batches_per_epoch
-
-def make_labels_matrix(
-    num_classes,
-    s_batch_size,
-    world_size,
-    unique_classes=False,
-    smoothing=0.0
-):
-    """
-    Make one-hot labels matrix for labeled samples
-
-    NOTE: Assumes labeled data is loaded with ClassStratifiedSampler from
-          src/data_manager.py
-    """
-
-    local_images = s_batch_size*num_classes
-    total_images = local_images*world_size
-
-    off_value = smoothing/(num_classes*world_size) if unique_classes else smoothing/num_classes
-
-    if unique_classes:
-        labels = torch.zeros(total_images, num_classes*world_size).cuda() + off_value
-        for r in range(world_size):
-            # -- index range for rank 'r' images
-            s1 = r * local_images
-            e1 = s1 + local_images
-            # -- index offset for rank 'r' classes
-            offset = r * num_classes
-            for i in range(num_classes):
-                labels[s1:e1][i::num_classes][:, offset+i] = 1. - smoothing + off_value
-    else:
-        labels = torch.zeros(total_images, num_classes).cuda() + off_value
-        for i in range(num_classes):
-            labels[i::num_classes][:, i] = 1. - smoothing + off_value
-
-    return labels
 
 def test_dataloader_iteration(csv_path):
     """

@@ -16,9 +16,8 @@ from typing import Iterable, Optional
 import util.misc as misc
 import util.lr_sched as lr_sched
 from sklearn.metrics import (
-    accuracy_score, roc_auc_score, precision_recall_curve, auc,
-    recall_score, precision_score, f1_score, confusion_matrix,
-    average_precision_score, multilabel_confusion_matrix, balanced_accuracy_score
+    accuracy_score, roc_auc_score, precision_recall_curve, f1_score,
+    confusion_matrix, average_precision_score, balanced_accuracy_score
 )
 from sklearn.calibration import calibration_curve
 from pycm import ConfusionMatrix
@@ -663,115 +662,6 @@ def multilabel_accuracy(output, target):
         acc = correct.sum() / total
     return acc
 
-# @torch.no_grad()
-# def multilabel_evaluate(data_loader, model, device, results_dir, epoch, mode, num_classes):
-#     """
-#     Evaluation function for multi-label classification
-#     """
-#     criterion = torch.nn.BCEWithLogitsLoss()
-
-#     metric_logger = misc.MetricLogger(delimiter="  ")
-#     header = 'Test:'
-
-#     prediction_decode_list = []
-#     true_label_list = []
-#     prediction_list = []
-    
-#     # switch to evaluation mode
-#     model.eval()
-
-#     for batch in metric_logger.log_every(data_loader, 10, header):
-#         images = batch[0]
-#         target = batch[-1]
-#         images = images.to(device, non_blocking=True)
-#         target = target.to(device, non_blocking=True)
-
-#         # compute output
-#         with torch.autocast(device_type='cuda', dtype=torch.float16):
-#             output = model(images)
-#             loss = criterion(output, target)
-#             prediction_sigmoid = torch.sigmoid(output)
-#             prediction_decode = (prediction_sigmoid > 0.5).float()
-
-#             prediction_decode_list.extend(prediction_decode.cpu().detach().numpy())
-#             true_label_list.extend(target.cpu().detach().numpy())
-#             prediction_list.extend(prediction_sigmoid.cpu().detach().numpy())
-
-#         acc1 = multilabel_accuracy(output, target)
-
-#         batch_size = images.shape[0]
-#         metric_logger.update(loss=loss.item())
-#         metric_logger.meters['acc1'].update(acc1.item(), n=batch_size)
-
-#     # Convert lists to numpy arrays
-#     true_label_array = np.array(true_label_list)
-#     prediction_array = np.array(prediction_list)
-#     prediction_decode_array = np.array(prediction_decode_list)
-
-#     # Calculate per-class metrics
-#     per_class_metrics = {}
-#     for i in range(num_classes):
-#         class_metrics = {
-#             'accuracy': accuracy_score(true_label_array[:, i], prediction_decode_array[:, i]),
-#             'f1': f1_score(true_label_array[:, i], prediction_decode_array[:, i]),
-#             'auc_roc': roc_auc_score(true_label_array[:, i], prediction_array[:, i]),
-#             'auc_pr': average_precision_score(true_label_array[:, i], prediction_array[:, i])
-#         }
-#         per_class_metrics[f'class_{i}'] = class_metrics
-
-#         # # Print per-class metrics
-#         # print(f'\nClass {i} Metrics:')
-#         # print(f'Accuracy: {class_metrics["accuracy"]:.4f}')
-#         # print(f'F1-score: {class_metrics["f1"]:.4f}')
-#         # print(f'AUC-ROC: {class_metrics["auc_roc"]:.4f}')
-#         # print(f'AUC-PR: {class_metrics["auc_pr"]:.4f}')
-
-#     # Calculate macro-averaged metrics
-#     macro_accuracy = accuracy_score(true_label_array, prediction_decode_array)
-#     macro_f1 = f1_score(true_label_array, prediction_decode_array, average='macro')
-#     macro_auc_roc = roc_auc_score(true_label_array, prediction_array, average='macro')
-#     macro_auc_pr = average_precision_score(true_label_array, prediction_array, average='macro')
-#     brier_score = np.mean(np.sum((prediction_array - true_label_array) ** 2, axis=1))
-
-#     # Print macro-averaged metrics
-#     print('\nMacro-averaged Metrics:')
-#     print(f'Accuracy: {macro_accuracy:.4f}')
-#     print(f'F1-score: {macro_f1:.4f}')
-#     print(f'AUC-ROC: {macro_auc_roc:.4f}')
-#     print(f'AUC-PR: {macro_auc_pr:.4f}')
-#     print(f'Brier Score: {brier_score:.4f}')
-
-#     # Save results to CSV
-#     results_path = os.path.join(results_dir, f'metrics_{mode}.csv')
-    
-#     # Create results dictionary with macro metrics
-#     results = {
-#         "Epoch": epoch,
-#         "Acc": macro_accuracy,
-#         "AUCROC": macro_auc_roc,
-#         "F1": macro_f1,
-#         "AUCPR": macro_auc_pr,
-#         "Brier": brier_score
-#     }
-    
-#     # Add per-class metrics to results
-#     for i in range(num_classes):
-#         class_metrics = per_class_metrics[f'class_{i}']
-#         results.update({
-#             f"Class_{i}_Accuracy": class_metrics['accuracy'],
-#             f"Class_{i}_F1": class_metrics['f1'],
-#             f"Class_{i}_AUC_ROC": class_metrics['auc_roc'],
-#             f"Class_{i}_AUC_PR": class_metrics['auc_pr']
-#         })
-
-#     # Convert to DataFrame and save
-#     results_df = pd.DataFrame([results])
-#     if os.path.exists(results_path):
-#         results_df.to_csv(results_path, mode='a', header=False, index=False)
-#     else:
-#         results_df.to_csv(results_path, mode='w', header=True, index=False)
-
-#     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}, macro_auc_roc
 
 
 @torch.no_grad()
@@ -1098,15 +988,3 @@ def multilabel_evaluate(data_loader, model, device, results_dir, epoch, mode, nu
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}, overall_auc_roc if overall_auc_roc != -1 else 0.0
 
-
-
-def multilabel_accuracy(output, target):
-    """
-    Compute the multi-label classification accuracy.
-    """
-    with torch.no_grad():
-        output_binary = (torch.sigmoid(output) > 0.5).float()
-        correct = (output_binary == target).float().sum(dim=1)
-        total = target.size(0) * target.size(1)
-        acc = correct.sum() / total
-    return acc

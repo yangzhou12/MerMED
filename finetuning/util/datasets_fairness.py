@@ -1,16 +1,12 @@
 import os
-from torchvision import datasets, transforms
+from torchvision import transforms
 from timm.data import create_transform
-from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision.transforms.functional import InterpolationMode
-from torch.utils.data import DataLoader
 
 import pandas as pd
 from torch.utils.data import Dataset
 from PIL import Image
-from torchvision import transforms
 import torch
-from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from datasets import load_dataset
 
@@ -218,80 +214,6 @@ class TSMDataset(Dataset):
             return image, label
 
 # Usage example for external validation
-def create_external_datasets(args, transform=None):
-    """
-    Create training and external test datasets with aligned label mappings.
-    
-    Args:
-        args: Arguments containing paths and configuration
-        transform: Image transforms to apply
-    
-    Returns:
-        train_dataset, val_dataset, test_dataset, label_mapping
-    """
-    if transform == None:
-        transform = build_transform("test", args)
-
-    # Determine sensitive attributes
-    sensitive_attr = getattr(args, 'sensitive_attr', None)
-    return_sensitive_attr = getattr(args, 'return_sensitive_attr', False)
-
-    # Create training dataset
-    train_dataset = TSMDataset(
-        csv_file=args.train_label_path,
-        root_dir=args.train_data_path,
-        split="train",
-        transform=transform,
-        sensitive_attr=sensitive_attr,
-        return_sensitive_attr=return_sensitive_attr
-    )
-    
-    # Create validation dataset (from same CSV as training)
-    val_dataset = TSMDataset(
-        csv_file=args.train_label_path,
-        root_dir=args.train_data_path,
-        split="val",
-        transform=transform,
-        sensitive_attr=sensitive_attr,
-        return_sensitive_attr=return_sensitive_attr
-    )
-    
-    # Get label mapping from training set
-    label_mapping = train_dataset.get_label_mapping()
-    
-    # Create external test dataset with the training label mapping
-    test_dataset = TSMDataset(
-        csv_file=args.test_label_path,
-        root_dir=args.test_data_path,
-        split="test",
-        transform=transform,
-        label_mapping=label_mapping,
-        is_external_test=True,
-        sensitive_attr=sensitive_attr,
-        return_sensitive_attr=return_sensitive_attr
-    )
-    
-    print(f"Training samples: {len(train_dataset)}")
-    print(f"Validation samples: {len(val_dataset)}")
-    print(f"External test samples: {len(test_dataset)}")
-    print(f"Number of classes: {train_dataset.get_num_classes()}")
-    print(f"Label mapping: {label_mapping}")
-    
-    # Print sensitive attribute information
-    if sensitive_attr is not None:
-        sens_info = train_dataset.get_sensitive_attr_info()
-        print(f"\nSensitive attributes: {sens_info['attributes']}")
-        print(f"Sensitive attribute mappings: {sens_info['mappings']}")
-        
-        print("\nSensitive attribute distributions:")
-        for split_name, dataset in [("Train", train_dataset), ("Val", val_dataset), ("Test", test_dataset)]:
-            dist = dataset.get_sensitive_attr_distribution()
-            print(f"\n{split_name} split:")
-            for attr, values in dist.items():
-                print(f"  {attr}: {values}")
-    
-    return train_dataset, val_dataset, test_dataset, label_mapping
-
 class HFDataset(Dataset):
     def __init__(self, dataset_name, split="train", train_size=1, transform=None,
                  sensitive_attr=None, return_sensitive_attr=False):
@@ -478,43 +400,3 @@ def build_transform(split, args):
     t.append(transforms.ToTensor())
     t.append(transforms.Normalize(mean, std))
     return transforms.Compose(t)
-
-
-if __name__ == "__main__":
-    # Example usage with sensitive attributes
-    data_path = "/path/to/data"
-    label_path = "/path/to/labels.csv"
-    
-    # Single sensitive attribute
-    dataset = TSMDataset(
-        csv_file=label_path, 
-        root_dir=data_path, 
-        split="train", 
-        transform=None,
-        sensitive_attr="gender",  # or "age"
-        return_sensitive_attr=True
-    )
-    
-    # Multiple sensitive attributes
-    dataset_multi = TSMDataset(
-        csv_file=label_path, 
-        root_dir=data_path, 
-        split="train", 
-        transform=None,
-        sensitive_attr=["gender", "age"],
-        return_sensitive_attr=True
-    )
-    
-    # Get a sample
-    if len(dataset) > 0:
-        image, label, sensitive_attrs = dataset[0]
-        print(f"Label: {label}")
-        print(f"Sensitive attributes: {sensitive_attrs}")
-    
-    # Get sensitive attribute info
-    sens_info = dataset.get_sensitive_attr_info()
-    print(f"\nSensitive attribute info: {sens_info}")
-    
-    # Get distribution
-    dist = dataset.get_sensitive_attr_distribution()
-    print(f"\nSensitive attribute distribution: {dist}")

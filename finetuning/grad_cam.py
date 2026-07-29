@@ -5,12 +5,11 @@ label CSV, and saves per-class / overall Grad-CAM heatmaps. All paths are suppli
 the command line so the script carries no machine-specific configuration.
 """
 import argparse
-from pytorch_grad_cam import GradCAM, HiResCAM, GradCAMPlusPlus, ScoreCAM, AblationCAM, XGradCAM, EigenCAM, FullGrad
+from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-from pytorch_grad_cam.utils.image import show_cam_on_image, preprocess_image
+from pytorch_grad_cam.utils.image import show_cam_on_image
 import torch
 import numpy as np
-import json
 from PIL import Image
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt

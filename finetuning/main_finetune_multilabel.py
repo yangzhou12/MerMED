@@ -49,7 +49,7 @@ def get_args_parser() -> argparse.ArgumentParser:
                         help='images input size')
 
     parser.add_argument('--drop_path', type=float, default=0.2, metavar='PCT',
-                        help='Drop path rate (default: 0.1)')
+                        help='Drop path rate (default: 0.2)')
 
     # Optimizer parameters
     parser.add_argument('--clip_grad', type=float, default=None, metavar='NORM',
@@ -87,8 +87,6 @@ def get_args_parser() -> argparse.ArgumentParser:
                         help='Random erase mode (default: "pixel")')
     parser.add_argument('--recount', type=int, default=1,
                         help='Random erase count (default: 1)')
-    parser.add_argument('--resplit', action='store_true', default=False,
-                        help='Do not random erase first (clean) augmentation split')
 
     # * Mixup params
     parser.add_argument('--mixup', type=float, default=0,
@@ -148,7 +146,6 @@ def get_args_parser() -> argparse.ArgumentParser:
     # distributed training parameters
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
-    parser.add_argument('--local_rank', default=-1, type=int)
     parser.add_argument('--dist_on_itp', action='store_true')
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
@@ -342,7 +339,7 @@ def main(args: argparse.Namespace) -> None:
             'head.weight', 'head.bias', 
             'norm.weight', 'norm.bias', 
             'fc_norm.weight', 'fc_norm.bias',
-            'head.fc.weight', 'head.fc.bias',  # Swin style
+            'head.fc.weight', 'head.fc.bias',
         ]
 
         # Remove classification head and normalization parameters

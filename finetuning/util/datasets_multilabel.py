@@ -1,16 +1,12 @@
 import os
-from torchvision import datasets, transforms
+from torchvision import transforms
 from timm.data import create_transform
-from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision.transforms.functional import InterpolationMode
-from torch.utils.data import DataLoader
 
 import pandas as pd
 from torch.utils.data import Dataset
 from PIL import Image
-from torchvision import transforms
 import torch
-from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 
 # OPENEYE_MEAN = (0.31561512, 0.20948674, 0.16498742)
@@ -19,35 +15,6 @@ from sklearn.model_selection import train_test_split
 OPENEYE_MEAN = (0.485, 0.456, 0.406)
 OPENEYE_STD = (0.229, 0.224, 0.225)
 
-# Modality: cfp
-# Mean: [0.33781426 0.21333193 0.13285545]
-# Std: [0.29643703 0.1900187  0.13929177]
-
-# Modality: oct
-# Mean: [0.19832779 0.19832779 0.19832777]
-# Std: [0.22167036 0.22167036 0.22167036]
-
-# Modality: cxr
-# Mean: [0.50756656 0.50756656 0.50756656]
-# Std: [0.31223216 0.31223216 0.31223216]
-
-# Modality: pathology
-# Mean: [0.72139378 0.60500935 0.70543986]
-# Std: [0.24855434 0.27136655 0.24570293]
-
-# Modality: CT
-# Mean: [0.33009237 0.33009237 0.33009237]
-# Std: [0.32522697 0.32522697 0.32522697]
-
-# Modality: US
-# Mean: [0.14694033 0.14694033 0.14694033]
-# Std: [0.1806314 0.1806314 0.1806314]
-
-# Modality: skin
-# Mean: [0.66138601 0.51889024 0.47144768]
-# Std: [0.23963617 0.21994001 0.22855408]
-
-# Define normalization constants for each modality
 _NORMS = {
     'cfp': ((0.33781426, 0.21333193, 0.13285545), (0.29643703, 0.1900187, 0.13929177)),
     'oct': ((0.19832779, 0.19832779, 0.19832777), (0.22167036, 0.22167036, 0.22167036)),

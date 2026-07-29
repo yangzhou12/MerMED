@@ -52,12 +52,6 @@ class MemoryBank(nn.Module):
         ptr = (ptr + batch_size) % self.K  # move pointer
         self.queue_ptr[0] = ptr
 
-    def get_features(self):
-        return self.queue.clone().detach()
-    
-    def get_labels(self):
-        return self.label_queue.clone().detach()
-
     def forward(self, x, y, update=False):
         # Compute logits
         logits = x @ self.queue.clone().detach()

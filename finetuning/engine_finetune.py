@@ -17,7 +17,7 @@ from typing import Iterable, Optional
 import util.misc as misc
 import util.lr_sched as lr_sched
 # from sklearn.metrics import accuracy_score, roc_auc_score, f1_score, average_precision_score, multilabel_confusion_matrix
-from sklearn.metrics import accuracy_score, roc_auc_score, precision_recall_curve, auc, recall_score, precision_score, f1_score, confusion_matrix, average_precision_score, multilabel_confusion_matrix, balanced_accuracy_score
+from sklearn.metrics import accuracy_score, roc_auc_score, recall_score, precision_score, f1_score, confusion_matrix, average_precision_score, balanced_accuracy_score
 from sklearn.calibration import calibration_curve
 from pycm import ConfusionMatrix
 import matplotlib.pyplot as plt
@@ -140,40 +140,6 @@ def plot_reliability_diagram_binary(y_true_binary, y_prob, save_path, title_pref
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     plt.close()
-
-def misc_measures(confusion_matrix):
-    
-    acc = []
-    sensitivity = []
-    specificity = []
-    precision = []
-    G = []
-    F1_score_2 = []
-    mcc_ = []
-    
-    for i in range(1, confusion_matrix.shape[0]):
-        cm1=confusion_matrix[i]
-        acc.append(1.*(cm1[0,0]+cm1[1,1])/np.sum(cm1))
-        sensitivity_ = 1.*cm1[1,1]/(cm1[1,0]+cm1[1,1])
-        sensitivity.append(sensitivity_)
-        specificity_ = 1.*cm1[0,0]/(cm1[0,1]+cm1[0,0])
-        specificity.append(specificity_)
-        precision_ = 1.*cm1[1,1]/(cm1[1,1]+cm1[0,1])
-        precision.append(precision_)
-        G.append(np.sqrt(sensitivity_*specificity_))
-        F1_score_2.append(2*precision_*sensitivity_/(precision_+sensitivity_))
-        mcc = (cm1[0,0]*cm1[1,1]-cm1[0,1]*cm1[1,0])/np.sqrt((cm1[0,0]+cm1[0,1])*(cm1[0,0]+cm1[1,0])*(cm1[1,1]+cm1[1,0])*(cm1[1,1]+cm1[0,1]))
-        mcc_.append(mcc)
-        
-    acc = np.array(acc).mean()
-    sensitivity = np.array(sensitivity).mean()
-    specificity = np.array(specificity).mean()
-    precision = np.array(precision).mean()
-    G = np.array(G).mean()
-    F1_score_2 = np.array(F1_score_2).mean()
-    mcc_ = np.array(mcc_).mean()
-    
-    return acc, sensitivity, specificity, precision, G, F1_score_2, mcc_
 
 def compute_metrics(y_true, y_pred):
     acc = accuracy_score(y_true, y_pred)

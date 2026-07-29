@@ -1,16 +1,12 @@
 import os
-from torchvision import datasets, transforms
+from torchvision import transforms
 from timm.data import create_transform
-from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torchvision.transforms.functional import InterpolationMode
-from torch.utils.data import DataLoader
 
 import pandas as pd
 from torch.utils.data import Dataset
 from PIL import Image
-from torchvision import transforms
 import torch
-from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from datasets import load_dataset
 
@@ -30,33 +26,6 @@ _NORMS = {
     'skin': ((0.66138601, 0.51889024, 0.47144768), (0.23963617, 0.21994001, 0.22855408))
 }
 
-# Modality: cfp
-# Mean: [0.33781426 0.21333193 0.13285545]
-# Std: [0.29643703 0.1900187  0.13929177]
-
-# Modality: oct
-# Mean: [0.19832779 0.19832779 0.19832777]
-# Std: [0.22167036 0.22167036 0.22167036]
-
-# Modality: cxr
-# Mean: [0.50756656 0.50756656 0.50756656]
-# Std: [0.31223216 0.31223216 0.31223216]
-
-# Modality: pathology
-# Mean: [0.72139378 0.60500935 0.70543986]
-# Std: [0.24855434 0.27136655 0.24570293]
-
-# Modality: CT
-# Mean: [0.33009237 0.33009237 0.33009237]
-# Std: [0.32522697 0.32522697 0.32522697]
-
-# Modality: US
-# Mean: [0.14694033 0.14694033 0.14694033]
-# Std: [0.1806314 0.1806314 0.1806314]
-
-# Modality: skin
-# Mean: [0.66138601 0.51889024 0.47144768]
-# Std: [0.23963617 0.21994001 0.22855408]
 
 class TSMDataset(Dataset):
     def __init__(self, csv_file, root_dir, split="train", train_size=1, transform=None, 
@@ -235,64 +204,6 @@ def create_external_datasets(args, transform=None):
     
     return train_dataset, val_dataset, test_dataset, label_mapping
 
-# class TSMDataset(Dataset):
-#     def __init__(self, csv_file, root_dir, split="train", train_size=1, transform=None):
-#         """
-#         Args:
-#             csv_file (string): Path to the CSV file with columns "image" and "label".
-#             root_dir (string): Directory with all the images.
-#             transform (callable, optional): Optional transform to be applied on a sample.
-#         """
-#         self.data = pd.read_csv(csv_file)
-#         self.is_multilabel = False
-#         if "[" in str(self.data["label"][0]):
-#             self.is_multilabel = True
-#         else:
-#             label_list = self.data["label"].unique().tolist()
-#             self.label2idx = {name: i for i, name in enumerate(label_list)}
-
-#         if "split" not in self.data.columns:
-#             self.split_data()
-
-#         self.data = self.data[self.data["split"] == split]
-#         if train_size < 1:
-#             if self.is_multilabel:
-#                 self.data, _ = train_test_split(self.data, train_size=train_size, random_state=42)
-#             else:
-#                 self.data, _ = train_test_split(self.data, train_size=train_size, random_state=42, stratify=self.data['label'])
-
-#         self.root_dir = root_dir
-#         self.transform = transform
-
-#     def split_data(self, train_size=0.7, val_size=0.15, test_size=0.15, seed=42):
-#         # Split DataFrame into train, validation, and test sets
-#         train_data, temp_test_data = train_test_split(self.data, train_size=train_size, random_state=seed, stratify=self.data['label'])
-#         rel_val_size = val_size / (val_size + test_size)
-#         val_data, test_data = train_test_split(temp_test_data, train_size=rel_val_size, random_state=seed, stratify=temp_test_data['label'])
-
-#         # Add a new column to indicate the split
-#         self.data['split'] = 'train'
-#         self.data.loc[val_data.index, 'split'] = 'val'
-#         self.data.loc[test_data.index, 'split'] = 'test'
-
-#     def __len__(self):
-#         return len(self.data)
-
-#     def __getitem__(self, idx):
-#         data_point = self.data.iloc[idx]
-#         img_path = os.path.join(self.root_dir, data_point.image_path)
-#         image = Image.open(img_path).convert('RGB')
-        
-#         if self.is_multilabel:
-#             label = eval(data_point.label)
-#         else:
-#             label = self.label2idx[data_point.label]
-#         label = torch.tensor(label, dtype=torch.int64)
-
-#         if self.transform:
-#             image = self.transform(image)
-
-#         return image, label
 
 class HFDataset(Dataset):
     def __init__(self, dataset_name, split="train", train_size=1, transform=None):
