@@ -7,54 +7,12 @@
 [![Model](https://img.shields.io/badge/%F0%9F%A4%97%20HuggingFace-MerMED-yellow)](https://huggingface.co/youngzhou12/MerMED)
 [![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey)](LICENSE)
 
-MerMED-FM is a self-supervised foundation model for medical imaging that spans
-**seven modalities** and more than ten specialties: color fundus photography (CFP),
-optical coherence tomography (OCT), chest X-ray (CXR), CT, histopathology,
-ultrasound, and dermatology.
+MerMED-FM is a self-supervised foundation model for medical imaging covering **seven
+modalities**: color fundus photography (CFP), optical coherence tomography (OCT),
+chest X-ray (CXR), CT, histopathology, ultrasound, and dermatology.
 
-A ViT-B/16 backbone (85.8 M parameters) is pretrained on 3.3 M images with a
-DINO-style teacher–student objective, extended with a **feature/label memory
-bank**, **random partitioning** of the prototype space, and a **KoLeo**
-regularizer. The resulting teacher backbone transfers to downstream
-classification by finetuning.
-
-This repository contains the pretraining, finetuning, evaluation, fairness, and
-explainability code used in the paper.
-
-### Reported performance
-
-Best test AUROC per modality, as reported in the
-[preprint abstract](https://arxiv.org/abs/2507.00185):
-
-| OCT | Pathology | Ultrasound | CT | Dermatology |
-|:---:|:---:|:---:|:---:|:---:|
-| 0.988 | 0.982 | 0.951 | 0.943 | 0.931 |
-
-Refer to the [published paper](https://doi.org/10.1016/j.landig.2026.101007) for
-the authoritative results across all datasets and modalities. The
-[per-dataset table](#example-test-performance) below is computed from this
-repository's own runs and is scoped differently, so individual numbers there will
-not match these headline figures.
-
----
-
-## Contents
-
-- [Installation](#installation)
-- [Pretrained weights](#pretrained-weights)
-- [Quick start: feature extraction](#quick-start-feature-extraction)
-- [Repository layout](#repository-layout)
-- [Data format](#data-format)
-- [Pretraining](#pretraining)
-- [Finetuning and evaluation](#finetuning-and-evaluation)
-- [Aggregating results](#aggregating-results)
-- [Explainability](#explainability)
-- [Data availability](#data-availability)
-- [License](#license)
-- [Citation](#citation)
-- [Acknowledgements](#acknowledgements)
-
----
+This repository holds the pretraining and finetuning code. For the method, datasets,
+and results, see the [paper](https://doi.org/10.1016/j.landig.2026.101007).
 
 ## Installation
 
@@ -89,22 +47,15 @@ from huggingface_hub import hf_hub_download
 ckpt = hf_hub_download("youngzhou12/MerMED", "MerMED.pth")
 ```
 
-`MerMED.pth` is the **teacher** backbone at the epoch-50 snapshot of the
-100-epoch pretraining schedule. It is a full training checkpoint, with keys
-`student`, `teacher`, `optimizer`, `memory_bank`, `epoch`, `args`, and
-`fp16_scaler`; downstream code reads `teacher`.
+`MerMED.pth` is the **teacher** backbone at the epoch-50 snapshot of the 100-epoch
+pretraining schedule. It is a full training checkpoint with keys `student`, `teacher`,
+`optimizer`, `memory_bank`, `epoch`, `args`, `fp16_scaler`; downstream code reads
+`teacher`.
 
-> Because the checkpoint pickles an `argparse.Namespace`, loading it requires
-> `torch.load(..., weights_only=False)`. Only load checkpoints you trust. To
-> produce a smaller, tensors-only artifact that loads safely under
-> `weights_only=True`:
->
-> ```bash
-> python tools/export_release_checkpoint.py weights/MerMED.pth MerMED_release.pth
-> ```
->
-> This keeps the teacher weights and drops the optimizer, memory bank, student
-> copy, and run metadata — 1.61 GB → 0.37 GB.
+> Loading it requires `torch.load(..., weights_only=False)`, because it pickles an
+> `argparse.Namespace`. Only load checkpoints you trust.
+> `python tools/export_release_checkpoint.py weights/MerMED.pth out.pth` reduces it to
+> a tensors-only file (1.61 GB → 0.37 GB) that loads under `weights_only=True`.
 
 ## Quick start: feature extraction
 
@@ -142,44 +93,24 @@ with torch.no_grad():
     features = model(preprocess(img).unsqueeze(0))   # -> torch.Size([1, 768])
 ```
 
-Note that **finetuning** instead uses `--global_pool avg` and deliberately
-reinitializes the final norm so that it trains together with the new
-classification head (see `finetuning/main_finetune.py`). The snippet above is for
+**Finetuning** instead uses `--global_pool avg` and deliberately reinitializes the
+final norm so it trains with the new classification head. Use the snippet above for
 frozen embeddings.
 
 ## Repository layout
 
 ```
 MerMED/
-├── pretraining/          # self-supervised pretraining (see pretraining/README.md)
-│   ├── main_mermed.py        # training entry point
-│   ├── datasets.py           # manifest dataset + multi-crop augmentation + sampler
-│   ├── models/               # ViT backbones (tiny/small/base/large)
-│   ├── head.py               # projection head
-│   ├── memory_bank.py        # cross-rank feature/label memory bank
-│   ├── random_partition.py   # random partitioning of the output space
-│   ├── criterion.py          # student-teacher cross-entropy
-│   ├── koleo.py              # KoLeo regularizer
-│   └── train_mermed.sh       # ready-to-edit launcher
-├── finetuning/           # finetuning, evaluation, explainability (see finetuning/README.md)
-│   ├── main_finetune.py           # single-label finetuning + evaluation
-│   ├── main_finetune_multilabel.py
-│   ├── main_finetune_fairness.py
-│   ├── main_external.py           # train on one dataset, test on another
-│   ├── models_vit.py              # backbone builders
-│   ├── get_MerMED_*_results.py    # metric aggregation across seeds
-│   ├── grad_cam.py                # Grad-CAM heatmaps
-│   ├── visualize_attention.py     # self-attention maps
-│   └── scripts/finetune_mermed.sh # batch launcher
-├── tools/
-│   └── export_release_checkpoint.py
-└── weights/              # place MerMED.pth here (git-ignored)
+├── pretraining/    # self-supervised pretraining — see pretraining/README.md
+├── finetuning/     # finetuning, evaluation, explainability — see finetuning/README.md
+├── tools/          # export_release_checkpoint.py
+└── weights/        # place MerMED.pth here (git-ignored)
 ```
 
 ## Data format
 
-No data ships with this repository. Both stages read plain CSV manifests, with
-image paths resolved against a data root you supply.
+No data ships with this repository. Both stages read CSV manifests, with image paths
+resolved against a data root you supply.
 
 **Pretraining manifest** — columns `image_id, image_path, modality`:
 
@@ -189,7 +120,7 @@ TRAIN032990.jpg,<DATA_ROOT>/JustRAIGS/images/TRAIN032990.jpg,cfp
 ```
 
 `modality` selects the per-modality mean/std normalization and is matched
-**case-sensitively**. The accepted values are:
+**case-sensitively**:
 
 | Value | Modality |
 |-------|----------|
@@ -202,15 +133,13 @@ TRAIN032990.jpg,<DATA_ROOT>/JustRAIGS/images/TRAIN032990.jpg,cfp
 | `skin` | Dermatology |
 | `eye` | Generic ophthalmic fallback (`cfp` + `oct` pooled statistics) |
 
-Note the capitalization of `CT` and `US`, and that histopathology is
-`pathology` rather than `path`. An unrecognized value raises a `KeyError` during
-pretraining (`DataAugmentationMerMED` in `main_mermed.py`). The finetuning
-entry points take the same names through `--modality`, which additionally
-accepts `other` to fall back to ImageNet statistics.
+Note the capitalization of `CT` and `US`, and that histopathology is `pathology`, not
+`path`. An unrecognized value raises a `KeyError` during pretraining. The finetuning
+entry points take the same names through `--modality`.
 
 **Downstream labels** — each dataset directory holds a `finetune_labels.csv` with
-columns `image_id, image_path, label, split`, where `split ∈ {train, val, test}`
-and `image_path` is relative to that dataset's data root:
+columns `image_id, image_path, label, split`, where `split ∈ {train, val, test}` and
+`image_path` is relative to that dataset's data root:
 
 ```csv
 image_id,image_path,label,split
@@ -227,8 +156,7 @@ cd pretraining
 bash train_mermed.sh
 ```
 
-The equivalent explicit command — these are the hyperparameters recorded in the
-released checkpoint:
+The equivalent explicit command, with the released checkpoint's hyperparameters:
 
 ```bash
 torchrun --nproc-per-node 8 main_mermed.py \
@@ -239,25 +167,20 @@ torchrun --nproc-per-node 8 main_mermed.py \
     --momentum_teacher 0.9995 --warmup_teacher_temp 0.04 --teacher_temp 0.07 \
     --warmup_teacher_temp_epochs 10 --drop_path_rate 0.1 --use_bn_in_head true \
     --clip_grad 1 --epochs 100 \
-    --data_path <path/to/MerMED_Mix4.csv> \
+    --data_path <path/to/manifest.csv> \
     --output_dir ./output_mermed
 ```
-
-Augmentation produces 2 global crops (224×224) and `--local_crops_number` local
-crops (96×96) with per-modality normalization (`DataAugmentationMerMED` in
-`main_mermed.py`).
 
 Checkpoints are written to `--output_dir` as `checkpoint.pth`, plus
 `checkpoint<epoch>.pth` every `--saveckp_freq` epochs. Training is tracked with
 [Weights & Biases](https://wandb.ai) by default; pass **`--no_wandb`** to train
 without it (checkpointing is unaffected).
 
-> **Batch size constraint.** The memory bank enqueues one slot per sample and
-> requires its capacity to divide evenly by the global batch, so
-> `--out_dim % (--batch_size_per_gpu × num_gpus)` must be `0`. The released
-> recipe satisfies this (`131072 % (128 × 8) == 0`); values such as 96 or 100 per
-> GPU do not, and trip an assertion in `memory_bank.py` on the first step. Prefer
-> powers of two when changing the batch size or GPU count.
+> **Batch size constraint.** The memory bank enqueues one slot per sample and requires
+> its capacity to divide evenly by the global batch, so
+> `--out_dim % (--batch_size_per_gpu × num_gpus)` must be `0`. The released recipe
+> satisfies this (`131072 % (128 × 8) == 0`); values such as 96 or 100 per GPU do not,
+> and trip an assertion on the first step. Prefer powers of two.
 
 ## Finetuning and evaluation
 
@@ -278,63 +201,22 @@ python main_finetune.py \
     --log_dir   <RESULTS_DIR>/MerMED_100_seed0_logs/
 ```
 
+- `--task` must match the dataset's directory name under `--data_path`.
 - `--train_size` is the fraction of the training split to keep, taken as a
-  **stratified subsample** (any float in `(0, 1]`; the paper sweeps
-  `0.1, 0.3, 0.5, 1.0`). `1.0` uses the full split.
+  **stratified subsample** (any float in `(0, 1]`).
 - The test split is evaluated at the end of every run. Add `--eval` to evaluate an
   existing checkpoint without training.
-- Each run writes `metrics_val.csv`, `metrics_test.csv`,
-  `outputs_test.{csv,npz}`, reliability and confusion-matrix plots, and
-  `checkpoint-best.pth`. TensorBoard events go to `--log_dir`.
+- Each run writes `metrics_val.csv`, `metrics_test.csv`, `outputs_test.{csv,npz}`,
+  reliability and confusion-matrix plots, and `checkpoint-best.pth`. TensorBoard
+  events go to `--log_dir`.
 
 **Variants:** `main_finetune_multilabel.py` (multi-label, BCE loss),
 `main_finetune_fairness.py` (subgroup fairness via `--sensitive_attr`),
 `main_external.py` (train on one dataset, evaluate on an external test set).
 
-**All datasets × seeds × few-shot fractions:** edit the CONFIG block in
-`finetuning/scripts/finetune_mermed.sh`, then `bash scripts/finetune_mermed.sh`.
-It loops `train_sizes=(0.1 0.3 0.5 1.0)` × `seeds=(0 1 42 123 2025)` × datasets,
-allocating a free GPU per job.
-
-Metrics recorded: Accuracy, Balanced Accuracy, AUROC, AUC-PR, Sensitivity,
-Specificity, F1, Brier score, ECE, plus per-class variants and per-subgroup
-disparities for the fairness runs.
-
-## Aggregating results
-
-```bash
-cd finetuning
-python get_MerMED_results.py --result_dir <RESULTS_DIR> --output_dir ./aggregated_results
-```
-
-Produces `comprehensive_summary.csv` (mean ± confidence interval per metric) and
-`auc_f1_statistical_analysis.csv` (t-test / Mann-Whitney comparisons). Variants:
-`get_MerMED_per_class_results.py`, `get_MerMED_external_results.py`,
-`get_MerMED_multilabel_results.py`, `get_MerMED_fairness_results.py`,
-`get_MerMED_ablation_results.py`.
-
-Each script lists the methods and datasets to compare at the top of the file —
-edit those to match the runs present under `--result_dir`. The multi-label
-aggregator takes them on the command line instead:
-
-```bash
-python get_MerMED_multilabel_results.py --result_dir <RESULTS_DIR> --datasets my_cxr:5
-```
-
-### Example test performance
-
-MerMED at 100 % training data, one representative dataset per modality. Each
-value is the mean across the five seeds (0, 1, 42, 123, 2025):
-
-| Modality | Dataset | # classes | Acc | AUROC | AUC-PR | F1 |
-|----------|---------|----------:|----:|------:|-------:|---:|
-| CFP (fundus) | JSIEC | 39 | 0.897 | 0.996 | 0.951 | 0.866 |
-| OCT | OCTID | 5 | 0.963 | 0.998 | 0.989 | 0.953 |
-| Chest X-ray | TBX11K | 3 | 0.994 | 0.999 | 0.999 | 0.993 |
-| CT | SARS-COV-2 | 2 | 0.987 | 0.999 | 0.999 | 0.987 |
-| Pathology | BreakHis | 2 | 0.994 | 1.000 | 1.000 | 0.993 |
-| Ultrasound | BUSI | 3 | 0.862 | 0.973 | 0.944 | 0.843 |
-| Dermatology | HAM10000_clean | 7 | 0.932 | 0.987 | 0.922 | 0.850 |
+**Batch runs:** edit the CONFIG block in `finetuning/scripts/finetune_mermed.sh`, then
+`bash scripts/finetune_mermed.sh`. It loops train sizes × seeds × datasets, allocating
+a free GPU per job, and is also the reference list of dataset names and class counts.
 
 ## Explainability
 
@@ -351,94 +233,13 @@ python visualize_attention.py --arch vit_base_patch16 \
     --image_path <image> --output_dir ./attention
 ```
 
-## Data availability
-
-This repository contains no imaging data. The 50 downstream datasets are listed
-below with the exact identifier to pass as `--task` and the matching
-`--nb_classes`. **Restricted** datasets are available only under a data use
-agreement or from the respective custodians; the rest are obtainable from their
-original public sources.
-
-| Modality | `--task` | `--nb_classes` | Access |
-|----------|----------|---------------:|--------|
-| CFP | `APTOS2019` | 5 | public |
-| CFP | `CRFO-v4` | 7 | public |
-| CFP | `Glaucoma_fundus` | 3 | public |
-| CFP | `IDRiD` | 5 | public |
-| CFP | `JSIEC` | 39 | public |
-| CFP | `MESSIDOR2` | 5 | public |
-| CFP | `PAPILA` | 3 | public |
-| CFP | `DRCR_CFP` | 2 | restricted |
-| CFP | `FM-AMD` | 4 | restricted |
-| CFP | `FM-CKD` | 2 | restricted |
-| CFP | `FM-DR` | 5 | restricted |
-| CFP | `FM-Glaucoma` | 3 | restricted |
-| CFP | `FM-MMD` | 5 | restricted |
-| CFP | `Seed_Cataract` | 2 | restricted |
-| OCT | `OCTDL` | 7 | public |
-| OCT | `OCTID` | 5 | public |
-| OCT | `DRCR_OCT` | 2 | restricted |
-| CXR | `COVIDx-CXR4` | 2 | public |
-| CXR | `TBX11K` | 3 | public |
-| CXR | `rsna_pneumonia` | 2 | public |
-| CXR | `siim_acr_pneumothorax` | 2 | public |
-| CXR | `CBIS_DDSM` | 3 | public |
-| CT | `chest-ctscan-images` | 4 | public |
-| CT | `IQ-OTHNCCD` | 3 | public |
-| CT | `SARS-COV-2` | 2 | public |
-| CT | `HRCTCov19` | 2 | public |
-| CT | `iCTCF` | 3 | public |
-| CT | `RAPIER_CT` | 7 | restricted |
-| Pathology | `CRC-VAL-HE-7K` | 9 | public |
-| Pathology | `PanNuke` | 19 | public |
-| Pathology | `Kather_Texture_2016` | 8 | public |
-| Pathology | `BreakHis` | 2 | public |
-| Pathology | `Chaoyang` | 4 | public |
-| Pathology | `LC25000` | 5 | public |
-| Pathology | `MIDOG25` | 2 | public |
-| Pathology | `AMi-Br` | 2 | public |
-| Pathology | `TCGA` | 32 | restricted |
-| Pathology | `RAPIER_Gastric` | 3 | restricted |
-| Ultrasound | `BUSC` | 2 | public |
-| Ultrasound | `BUSI` | 3 | public |
-| Ultrasound | `US3M` | 2 | public |
-| Ultrasound | `BrEaST` | 2 | public |
-| Dermatology | `BCN20000` | 9 | public |
-| Dermatology | `Derm7pt` | 2 | public |
-| Dermatology | `Dermnet` | 23 | public |
-| Dermatology | `HAM10000_clean` | 7 | public |
-| Dermatology | `pad-ufes` | 6 | public |
-| Dermatology | `HIBA` | 2 | public |
-| Dermatology | `MSKCC` | 2 | public |
-| Dermatology | `DDI` | 2 | public |
-
-Identifiers are the directory names the loader expects, so they are not always
-the dataset's published name — `HAM10000_clean`, `pad-ufes`, `CBIS_DDSM` and
-`IQ-OTHNCCD` correspond to HAM10000, PAD-UFES-20, CBIS-DDSM and IQ-OTH/NCCD
-respectively. The same list drives
-`finetuning/scripts/finetune_mermed.sh`.
-
-The pretraining corpus is assembled from public per-modality image pools; see the
-paper for the full provenance.
-
 ## License
 
-This repository is released under **[CC BY-NC 4.0](LICENSE)** — free to use,
-share, and adapt for **non-commercial** purposes with attribution.
-
-The finetuning code derives from MAE and RETFound, both CC BY-NC 4.0, so the
-non-commercial restriction is inherited rather than freely chosen. Some
-components carry different terms, and one upstream project publishes no license
-at all — see **[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)** before
-redistributing.
+Released under **[CC BY-NC 4.0](LICENSE)** — use, share and adapt for
+**non-commercial** purposes with attribution. Third-party components are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Citation
-
-If you use MerMED-FM, please cite the paper:
-
-> Zhou Y, Quek CWN, Zhou J, et al. MerMED-FM: Multimodal, Multi-Disease Medical
-> Imaging Foundation Model. *Lancet Digit Health*. Published online July 27,
-> 2026. doi:10.1016/j.landig.2026.101007
 
 ```bibtex
 @article{zhou2026mermedfm,
@@ -466,15 +267,7 @@ If you use MerMED-FM, please cite the paper:
 }
 ```
 
-The earlier preprint is [arXiv:2507.00185](https://arxiv.org/abs/2507.00185).
-
 ## Acknowledgements
 
-MerMED-FM builds on these projects:
-
-- [MaSSL](https://github.com/sthalles/MaSSL) — memory bank and random prototype partitioning
-- [DINO](https://github.com/facebookresearch/dino) — self-distillation objective
-- [DINOv2](https://github.com/facebookresearch/dinov2) — KoLeo regularizer
-- [iBOT](https://github.com/bytedance/ibot) — ViT implementation
-- [MAE](https://github.com/facebookresearch/mae) and [RETFound](https://github.com/rmaphoh/RETFound_MAE) — finetuning pipeline
-- [timm](https://github.com/huggingface/pytorch-image-models) — backbone builders
+MerMED-FM builds on MaSSL, DINO, DINOv2, iBOT, MAE, RETFound and timm; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for per-file attribution.
