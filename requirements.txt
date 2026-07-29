@@ -23,8 +23,10 @@ pandas>=1.5.0
 scipy>=1.9.0
 scikit-learn>=1.1.0
 
-# Explainability, metrics, plotting
-pytorch-grad-cam>=1.4.0
+# Explainability, metrics, plotting.
+# grad-cam is the PyPI distribution; it provides the `pytorch_grad_cam` module
+# imported by finetuning/grad_cam.py.
+grad-cam>=1.4.0
 pycm>=3.5
 matplotlib>=3.5.0
 
