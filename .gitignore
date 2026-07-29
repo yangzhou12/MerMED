@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Model weights — MerMED.pth is distributed via HuggingFace, not git
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+weights/*
+!weights/.gitkeep
+
+# Training / evaluation outputs
+wandb/
+output_dir/
+output_mermed/
+log_dir/
+aggregated_results/
+heatmaps/
+runs/
+events.out.tfevents.*
+*.log
+nohup.out
+
+# Editors & OS
+.vscode/
+.idea/
+.DS_Store
+.ipynb_checkpoints/
+
+# Secrets
+.env

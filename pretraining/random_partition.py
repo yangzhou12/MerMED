@@ -1,3 +1,9 @@
+"""Random partitioning of the prototype/output space into sub-blocks, used to
+compute the MerMED loss over multiple randomized partitions of ``out_dim``.
+
+Adapted from MaSSL (https://github.com/sthalles/MaSSL).
+See THIRD_PARTY_NOTICES.md for attribution and licensing status.
+"""
 import torch
 import torch.nn as nn
 

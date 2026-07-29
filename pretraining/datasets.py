@@ -1,3 +1,9 @@
+"""Dataset and sampler for MerMED pretraining.
+
+Reads a manifest CSV (columns: image_id, image_path, modality), loads each image
+with PIL, and applies modality-aware multi-crop augmentation. ``AllClassesImbalancedSampler``
+keeps every modality represented in each batch under distributed training.
+"""
 import os
 
 import pandas as pd
@@ -312,7 +318,11 @@ def test_dataloader_iteration(csv_path):
             pass
 
 
-# Optional: If you want to run these tests directly
+# Smoke-test the dataset + sampler against a manifest CSV:
+#   python datasets.py <path/to/MerMED_Mix4.csv>
 if __name__ == "__main__":
-    csv_path = "/mnt/workspace/zy/MedFM/MedFM_labels.csv"
-    test_dataloader_iteration(csv_path)
+    import sys
+
+    if len(sys.argv) != 2:
+        sys.exit(f"usage: python {os.path.basename(__file__)} <manifest.csv>")
+    test_dataloader_iteration(sys.argv[1])

@@ -1,3 +1,11 @@
+"""MerMED-FM self-supervised pretraining entry point.
+
+Trains a ViT backbone with a DINO-style teacher-student objective, augmented with
+a memory bank, random partitioning of the prototype space, and an optional KoLeo
+regularizer. Launch with ``torchrun`` for multi-GPU training; see ``train_mermed.sh``
+and ``README.md`` for the recommended command. The resulting teacher checkpoint is
+the released ``MerMED.pth`` foundation model used by the finetuning code.
+"""
 import argparse
 import os
 import shutil
@@ -22,8 +30,7 @@ from memory_bank import MemoryBank
 from random_partition import RandomPartition
 from criterion import Criterion
 import models
-import wandb 
-
+import wandb
 
 torchvision_archs = sorted(
     name
@@ -62,9 +69,7 @@ def get_args_parser():
     )
     parser.add_argument(
         "--out_dim",
-        default=65536,
-        # default=131072,
-        # default=512,
+        default=131072,
         type=int,
         help="""Dimensionality of
         the MerMED head output. For complex and large datasets large values (like 65k) work well.""",
@@ -79,7 +84,7 @@ def get_args_parser():
     )
     parser.add_argument(
         "--momentum_teacher",
-        default=0.99,
+        default=0.9995,
         type=float,
         help="""Base EMA
         parameter for teacher update. The value is increased to 1 during training with cosine schedule.
@@ -87,7 +92,7 @@ def get_args_parser():
     )
     parser.add_argument(
         "--use_bn_in_head",
-        default=False,
+        default=True,
         type=utils.bool_flag,
         help="Whether to use batch normalizations in projection head (Default: False)",
     )
@@ -105,14 +110,14 @@ def get_args_parser():
     parser.add_argument(
         "--weight_decay",
         type=float,
-        default=0.000001,
+        default=0.04,
         help="""Initial value of the
         weight decay. With ViT, a smaller value at the beginning of training works well.""",
     )
     parser.add_argument(
         "--weight_decay_end",
         type=float,
-        default=0.000001,
+        default=0.4,
         help="""Final value of the
         weight decay. We use a cosine schedule for WD and using a larger decay by
         the end of training improves performance for ViTs.""",
@@ -120,21 +125,21 @@ def get_args_parser():
     parser.add_argument(
         "--layer_decay",
         type=float,
-        default=1.0,
-        # default=0.8,
+        # default=1.0,
+        default=0.8,
         help="""Initial value of the layer decay.""",
     )
     parser.add_argument(
         "--clip_grad",
         type=float,
-        default=3.0,
+        default=1.0,
         help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""",
     )
     parser.add_argument(
         "--batch_size_per_gpu",
-        default=32,
+        default=128,
         type=int,
         help="Per-GPU batch-size : number of distinct images loaded on one GPU.",
     )
@@ -143,7 +148,7 @@ def get_args_parser():
     )
     parser.add_argument(
         "--lr",
-        default=0.3,
+        default=5e-5,
         type=float,
         help="""Learning rate at the end of
         linear warmup (highest LR used during training). The learning rate is linearly scaled
@@ -158,7 +163,7 @@ def get_args_parser():
     parser.add_argument(
         "--min_lr",
         type=float,
-        default=0.0048,
+        default=1e-6,
         help="""Target LR at the
         end of optimization. We use a cosine LR schedule with linear warmup.""",
     )
@@ -178,7 +183,6 @@ def get_args_parser():
     parser.add_argument(
         "--partition_size", 
         default=16384, 
-        # default=64, 
         type=int, help="The size of the subgroups."
     )
     parser.add_argument(
@@ -224,7 +228,7 @@ def get_args_parser():
     )
     parser.add_argument(
         "--warmup_teacher_temp_epochs",
-        default=30,
+        default=10,
         type=int,
         help="Number of warmup epochs for the teacher temperature (Default: 30).",
     )
@@ -259,22 +263,35 @@ def get_args_parser():
     # Misc
     parser.add_argument(
         "--data_path",
-        default="<path/to/MedFM_data.csv>",
+        default="",
         type=str,
-        help="Please specify path to the training labels.",
+        help="Path to the training manifest CSV (columns: image_id, image_path, modality). Required.",
     )
     parser.add_argument(
         "--pretrained_path",
-        default="<path/to/pretrained_model.pth>",
-        # default="ckpts/vit_base_patch16_224.dino",
+        default="",
         type=str,
-        help="Please specify path to the pretrained model.",
+        help="Optional path to a backbone checkpoint used to initialize the student/teacher. "
+        "Leave empty to start from a randomly initialized backbone.",
     )
     parser.add_argument(
         "--resume_from_dir",
-        default=".",
+        default="",
         type=str,
-        help="Path to save logs and checkpoints.",
+        help="Optional directory containing a 'checkpoint.pth' to resume training from. "
+        "Leave empty to start a fresh run.",
+    )
+    parser.add_argument(
+        "--output_dir",
+        default="./output_mermed",
+        type=str,
+        help="Directory to write checkpoints and run metadata to.",
+    )
+    parser.add_argument(
+        "--no_wandb",
+        action="store_true",
+        help="Disable Weights & Biases logging. Training still writes checkpoints to "
+        "--output_dir.",
     )
     parser.add_argument(
         "--saveckp_freq", default=50, type=int, help="Save checkpoint every x epochs."
@@ -374,11 +391,14 @@ def train_mermed(args):
     embed_dim = student.embed_dim
     ckp_path = args.pretrained_path
 
-    print("Initialize teacher and student from {}".format(ckp_path))
-    checkpoint = torch.load(ckp_path, map_location="cpu", weights_only=True)
-    msg_student = student.load_state_dict(checkpoint, strict=False)
-    msg_teacher = teacher.load_state_dict(checkpoint, strict=False)
-    del checkpoint
+    if ckp_path and os.path.isfile(ckp_path):
+        print("Initialize teacher and student from {}".format(ckp_path))
+        checkpoint = torch.load(ckp_path, map_location="cpu", weights_only=True)
+        msg_student = student.load_state_dict(checkpoint, strict=False)
+        msg_teacher = teacher.load_state_dict(checkpoint, strict=False)
+        del checkpoint
+    else:
+        print("No backbone checkpoint provided; training from a randomly initialized backbone.")
 
     # multi-crop wrapper handles forward with inputs of different resolutions
     student = utils.MultiCropWrapper(
@@ -478,12 +498,15 @@ def train_mermed(args):
         start_warmup_value=args.warmup_teacher_temp,
     )
 
+    # Matches --warmup_epochs (10 for the released recipe). Taking it from args
+    # rather than hardcoding keeps schedules shorter than the warmup from
+    # tripping the length assertion in cosine_scheduler.
     ko_weight_schedule = utils.cosine_scheduler(
         base_value=args.koleo_loss_weight,
         final_value=args.koleo_loss_weight,
         epochs=args.epochs,
         niter_per_ep=len(data_loader),
-        warmup_epochs=10,
+        warmup_epochs=min(args.warmup_epochs, args.epochs),
         start_warmup_value=0,
     )
     # momentum parameter is increased to 1. during training with a cosine schedule
@@ -506,23 +529,29 @@ def train_mermed(args):
     )
     start_epoch = to_restore["epoch"]
 
+    # Checkpoints and run metadata always land in --output_dir; W&B, when
+    # enabled, mirrors them.
     if utils.is_main_process():
-        # wandb.init(mode="disabled")
-        wandb.init(project="MerMED", name=f"Model_{args.arch}", config=args)  # Initialize wandb
-        wandb.save("main_mermed.py")
-        wandb.save("utils.py")
-        wandb.save("head.py")
-        wandb.save("criterion.py")
-        wandb.save("memory_bank.py")
-        wandb.save("random_partition.py")
-        wandb.save("models/vision_transformer.py")
-        wandb.save("datasets.py")
+        os.makedirs(args.output_dir, exist_ok=True)
+        if not args.no_wandb:
+            wandb.init(project="MerMED", name=f"Model_{args.arch}", config=args)
+            for source in (
+                "main_mermed.py",
+                "utils.py",
+                "head.py",
+                "criterion.py",
+                "memory_bank.py",
+                "random_partition.py",
+                "models/vision_transformer.py",
+                "datasets.py",
+            ):
+                wandb.save(source)
         stats_file = open(
-            os.path.join(wandb.run.dir, "stats.txt"), "a", buffering=1
+            os.path.join(args.output_dir, "stats.txt"), "a", buffering=1
         )
         print(" ".join(sys.argv), flush=True)
         print(" ".join(sys.argv), file=stats_file, flush=True)
-        with open(os.path.join(wandb.run.dir, "metadata.txt"), "a") as f:
+        with open(os.path.join(args.output_dir, "metadata.txt"), "a") as f:
             yaml.dump(args, f, allow_unicode=True)
             f.write(str(student))
             f.write(str(teacher))
@@ -565,18 +594,14 @@ def train_mermed(args):
         }
         if fp16_scaler is not None:
             save_dict["fp16_scaler"] = fp16_scaler.state_dict()
-        if wandb.run is not None:
-            utils.save_on_master(
-                save_dict, os.path.join(
-                    wandb.run.dir, "checkpoint.pth")
-            )
+        utils.save_on_master(
+            save_dict, os.path.join(args.output_dir, "checkpoint.pth")
+        )
         if args.saveckp_freq and (epoch + 1) % args.saveckp_freq == 0:
-            if wandb.run is not None:
-                utils.save_on_master(
-                    save_dict,
-                    os.path.join(wandb.run.dir,
-                                 f"checkpoint{epoch:04}.pth"),
-                )
+            utils.save_on_master(
+                save_dict,
+                os.path.join(args.output_dir, f"checkpoint{epoch:04}.pth"),
+            )
 
     total_time = time.time() - start_time
     total_time_str = str(timedelta(seconds=int(total_time)))
@@ -713,34 +738,35 @@ def train_one_epoch(
 
         losses.update(loss.item(), images[0].size(0))
 
-        if wandb.run is not None and it % args.print_freq == 0:
+        if it % args.print_freq == 0:
             acc1, acc5 = accuracy(
                 student_output[0][0],
                 torch.argmax(teacher_output[1][0], dim=1),
                 topk=(1, 5),
             )
 
-            teacher_probs = torch.cat(teacher_output, dim=1).flatten(0, 1)
-            teacher_probs = torch.softmax(teacher_probs, dim=-1)
+            if wandb.run is not None:
+                teacher_probs = torch.cat(teacher_output, dim=1).flatten(0, 1)
+                teacher_probs = torch.softmax(teacher_probs, dim=-1)
 
-            wandb.log({
-                "loss/total": loss.item(),
-                "loss/koleo": ko.item(),
-                "loss/ce": ce.item(),
-                "acc/top1": acc1,
-                "acc/top5": acc5,
-                "metric/ko/weight": ko_weight_schedule[it],
-            })
+                wandb.log({
+                    "loss/total": loss.item(),
+                    "loss/koleo": ko.item(),
+                    "loss/ce": ce.item(),
+                    "acc/top1": acc1,
+                    "acc/top5": acc5,
+                    "metric/ko/weight": ko_weight_schedule[it],
+                })
 
-            n_protos = student_probs.shape[1]
-            wandb.log({
-                f"dist/probs/blocks_{n_protos}": torch.argmax(
-                    student_probs, dim=-1),
-            })
-            wandb.log({
-                f"dist/targets/blocks_{n_protos}":
-                torch.argmax(teacher_probs, dim=-1),
-            })
+                n_protos = student_probs.shape[1]
+                wandb.log({
+                    f"dist/probs/blocks_{n_protos}": torch.argmax(
+                        student_probs, dim=-1),
+                })
+                wandb.log({
+                    f"dist/targets/blocks_{n_protos}":
+                    torch.argmax(teacher_probs, dim=-1),
+                })
 
             progress.display(i)
 
@@ -793,6 +819,7 @@ class ProgressMeter(object):
 class DataAugmentationMerMED(object):
     def __init__(self, global_crops_scale, local_crops_scale, local_crops_number):
         self.normalizations = {
+            'eye': transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2470, 0.2435, 0.2616)),
             'cfp': transforms.Normalize((0.33781426, 0.21333193, 0.13285545), (0.29643703, 0.1900187, 0.13929177)),
             'oct': transforms.Normalize((0.19832779,), (0.22167036,)),
             'cxr': transforms.Normalize((0.50756656,), (0.31223216,)),

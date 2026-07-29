@@ -1,3 +1,11 @@
+"""Cross-entropy criterion between student and teacher logits for MerMED.
+
+Supports the memory-bank-masked variant used during MerMED pretraining as well as
+the plain DINO-style soft cross-entropy.
+
+Adapted from MaSSL (https://github.com/sthalles/MaSSL).
+See THIRD_PARTY_NOTICES.md for attribution and licensing status.
+"""
 import torch.nn as nn
 import torch
 
@@ -96,3 +104,69 @@ class Criterion(nn.Module):
 
         consistency /= count
         return consistency
+
+    def dino_loss(self, student_output, teacher_output):
+        """
+        Standard DINO loss computation.
+        
+        DINO loss strategy:
+        - Student sees all crops: 2 global crops + local crops
+        - Teacher sees only 2 global crops
+        - For the 2 global student crops: match with the OTHER global teacher crop
+          (student global 0 <-> teacher global 1, student global 1 <-> teacher global 0)
+        - For local student crops: match with both teacher global crops
+        
+        Args:
+            student_output: List of tensors, each of shape [batch_size, out_dim]
+                - student_output[0]: first global crop
+                - student_output[1]: second global crop
+                - student_output[2:]: local crops
+            teacher_output: List of 2 tensors, each of shape [batch_size, out_dim]
+                - teacher_output[0]: first global crop
+                - teacher_output[1]: second global crop
+        
+        Returns:
+            loss: Scalar tensor with the DINO loss
+        """
+        total_loss = 0
+        n_loss_terms = 0
+        
+        # Teacher has exactly 2 global crops
+        assert len(teacher_output) == 2, "Teacher should have exactly 2 global crops"
+        n_student_crops = len(student_output)
+        
+        # For the 2 global student crops: match with the OTHER teacher global crop
+        # Student global 0 <-> Teacher global 1
+        if n_student_crops >= 1:
+            student_log_probs_0 = torch.log_softmax(student_output[0], dim=-1)
+            teacher_probs_1 = torch.softmax(teacher_output[1].detach(), dim=-1)
+            loss_0 = torch.sum(-teacher_probs_1 * student_log_probs_0, dim=-1).mean()
+            total_loss += loss_0
+            n_loss_terms += 1
+        
+        # Student global 1 <-> Teacher global 0
+        if n_student_crops >= 2:
+            student_log_probs_1 = torch.log_softmax(student_output[1], dim=-1)
+            teacher_probs_0 = torch.softmax(teacher_output[0].detach(), dim=-1)
+            loss_1 = torch.sum(-teacher_probs_0 * student_log_probs_1, dim=-1).mean()
+            total_loss += loss_1
+            n_loss_terms += 1
+        
+        # For local student crops: match with both teacher global crops
+        for s_idx in range(2, n_student_crops):
+            s_out = student_output[s_idx]
+            student_log_probs = torch.log_softmax(s_out, dim=-1)
+            
+            # Match with teacher global 0
+            teacher_probs_0 = torch.softmax(teacher_output[0].detach(), dim=-1)
+            loss_local_0 = torch.sum(-teacher_probs_0 * student_log_probs, dim=-1).mean()
+            total_loss += loss_local_0
+            n_loss_terms += 1
+            
+            # Match with teacher global 1
+            teacher_probs_1 = torch.softmax(teacher_output[1].detach(), dim=-1)
+            loss_local_1 = torch.sum(-teacher_probs_1 * student_log_probs, dim=-1).mean()
+            total_loss += loss_local_1
+            n_loss_terms += 1
+        
+        return total_loss / n_loss_terms if n_loss_terms > 0 else torch.tensor(0.0, device=student_output[0].device)

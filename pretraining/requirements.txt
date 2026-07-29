@@ -1,0 +1,3 @@
+# Dependencies are managed at the repository root so the pretraining and
+# finetuning stacks cannot drift apart.
+-r ../requirements.txt

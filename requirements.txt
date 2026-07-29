@@ -1,26 +1,46 @@
-# Core PyTorch ecosystem
-torch>=1.12.0
-torchvision>=0.13.0
-torchaudio>=0.12.0
+# MerMED-FM — pretraining + finetuning dependencies.
+#   pip install -r requirements.txt
+#
+# Python >= 3.10 is required (the code uses PEP 604 `X | None` annotations).
+# Install torch/torchvision first if you need a specific CUDA build; see README.
 
-# Computer vision and image processing
-Pillow>=8.0.0
+# Core
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Backbones and transforms. dynamic_img_size= and the DINOv2/Swin builders in
+# finetuning/models_vit.py need a modern timm.
+timm>=0.9.12
+
+# Imaging & numerics
+Pillow>=9.0.0
 opencv-python>=4.5.0
+# scikit-image backs visualize_attention.py (imread, find_contours) and the
+# heatmap resizing in grad_cam.py.
+scikit-image>=0.19.0
+numpy>=1.23.0
+pandas>=1.5.0
+scipy>=1.9.0
+scikit-learn>=1.1.0
 
-# Deep learning and model libraries
-timm>=0.6.0
-timm[all]>=0.6.0
+# Explainability, metrics, plotting
+pytorch-grad-cam>=1.4.0
+pycm>=3.5
+matplotlib>=3.5.0
 
-# Data processing and analysis
-numpy>=1.21.0
-pandas>=1.3.0
-scipy>=1.7.0
+# Experiment tracking. wandb is optional at runtime — pass --no_wandb to
+# pretraining to skip it. tensorboard backs torch.utils.tensorboard.SummaryWriter,
+# which the finetuning entry points use for --log_dir.
+wandb>=0.13.0
+tensorboard>=2.10.0
 
-# Progress bars and utilities
+# Checkpoint download from HuggingFace (see README, "Pretrained weights").
+huggingface_hub>=0.23.0
+
+# Optional HuggingFace dataset backend, used by the `load_dataset` code path in
+# finetuning/util/datasets.py.
+datasets>=2.0.0
+
+# Utilities
 tqdm>=4.62.0
-
-# Configuration and YAML
 PyYAML>=6.0
-
-# Experiment tracking and logging
-wandb>=0.12.0

@@ -1,3 +1,9 @@
+"""Projection head: an MLP that maps backbone features to the L2-normalized
+bottleneck embedding used by the MerMED memory bank and loss.
+
+Adapted from MaSSL (https://github.com/sthalles/MaSSL).
+See THIRD_PARTY_NOTICES.md for attribution and licensing status.
+"""
 import torch.nn as nn
 from torch.nn.init import trunc_normal_
 
