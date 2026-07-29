@@ -17,8 +17,6 @@ import argparse
 import cv2
 import random
 import colorsys
-import requests
-from io import BytesIO
 
 import skimage.io
 from skimage.measure import find_contours
@@ -36,7 +34,7 @@ from PIL import Image
 # import models_vit as vits
 from timm.models.vision_transformer import VisionTransformer
 from functools import partial
-from typing import Optional, Tuple
+from typing import Optional
 
 class VisionTransformerWithAttention(VisionTransformer):
     """
@@ -145,25 +143,6 @@ class VisionTransformerWithAttention(VisionTransformer):
             attn_weights = attn_weights.softmax(dim=-1)
         
         return attn_weights
-    
-    def forward_with_attention(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Forward pass that also returns the last layer's attention weights.
-        
-        Args:
-            x: Input image tensor of shape (B, C, H, W)
-            attn_mask: Optional attention mask for masked attention
-            
-        Returns:
-            Tuple of (output logits, attention weights)
-        """
-        # Get attention weights
-        attn_weights = self.get_last_selfattention(x, attn_mask=attn_mask)
-        
-        # Regular forward pass
-        output = self.forward(x, attn_mask=attn_mask)
-        
-        return output, attn_weights
 
 def apply_mask(image, mask, color, alpha=0.5):
     for c in range(3):
@@ -265,40 +244,18 @@ if __name__ == '__main__':
         msg = model.load_state_dict(state_dict, strict=False)
         print('Pretrained weights found at {} and loaded with msg: {}'.format(args.pretrained_weights, msg))
     else:
-        # Fallback for quick sanity checks only: these are upstream DINO
-        # checkpoints, not MerMED. Pass --pretrained_weights to visualize MerMED.
-        print("Please use the `--pretrained_weights` argument to indicate the path of the checkpoint to evaluate.")
-        url = None
-        if args.arch == "vit_small" and args.patch_size == 16:
-            url = "dino_deitsmall16_pretrain/dino_deitsmall16_pretrain.pth"
-        elif args.arch == "vit_small" and args.patch_size == 8:
-            url = "dino_deitsmall8_300ep_pretrain/dino_deitsmall8_300ep_pretrain.pth"
-        elif args.arch == "vit_base" and args.patch_size == 16:
-            url = "dino_vitbase16_pretrain/dino_vitbase16_pretrain.pth"
-        elif args.arch == "vit_base" and args.patch_size == 8:
-            url = "dino_vitbase8_pretrain/dino_vitbase8_pretrain.pth"
-        if url is not None:
-            print("Since no pretrained weights have been provided, we load the reference pretrained DINO weights.")
-            state_dict = torch.hub.load_state_dict_from_url(url="https://dl.fbaipublicfiles.com/dino/" + url)
-            model.load_state_dict(state_dict, strict=True)
-        else:
-            print("There is no reference weights available for this model => We use random weights.")
+        sys.exit(
+            f"No checkpoint at {args.pretrained_weights!r}. Pass --pretrained_weights "
+            "pointing at the released MerMED checkpoint (see the repository README)."
+        )
 
     # open image
-    if args.image_path is None:
-        # No image specified - fall back to the sample image published with DINO.
-        print("Please use the `--image_path` argument to indicate the path of the image you wish to visualize.")
-        print("Since no image path have been provided, we use the reference DINO sample image.")
-        response = requests.get("https://dl.fbaipublicfiles.com/dino/img.png")
-        img = Image.open(BytesIO(response.content))
-        img = img.convert('RGB')
-    elif os.path.isfile(args.image_path):
+    if os.path.isfile(args.image_path):
         with open(args.image_path, 'rb') as f:
             img = Image.open(f)
             img = img.convert('RGB')
     else:
-        print(f"Provided image path {args.image_path} is non valid.")
-        sys.exit(1)
+        sys.exit(f"Provided --image_path {args.image_path!r} is not a file.")
     transform = pth_transforms.Compose([
         pth_transforms.Resize(args.image_size),
         pth_transforms.ToTensor(),

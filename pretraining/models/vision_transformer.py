@@ -16,8 +16,6 @@ import torch.nn as nn
 
 from functools import partial
 from utils import trunc_normal_
-from timm.models.vision_transformer import VisionTransformer as TimmVisionTransformer
-# from timm.models.registry import register_model
 
 
 def drop_path(x, drop_prob: float = 0.0, training: bool = False):
@@ -429,10 +427,4 @@ def vit_large(patch_size=16, **kwargs):
         qkv_bias=True,
         **kwargs
     )
-    return model
-
-def dinov2_base(**kwargs):
-    model = TimmVisionTransformer(
-        img_size=518, in_chans=3, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4, qkv_bias=True, reg_tokens = 4,
-        no_embed_class=True, init_values=1e-5, dynamic_img_size=True, **kwargs)
     return model
